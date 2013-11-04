@@ -1,3 +1,5 @@
+(* from mirage-www *)
+
 open Lwt
 
 (* XXX very inefficient *)
