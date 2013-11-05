@@ -31,8 +31,9 @@
 open Lwt
 
 module BS = Baardskeerder.Baardskeerder(Baardskeerder.Logs.Flog0)(Baardskeerder_mirage.Stores.Blkif)
+module DB = BS
 
-type t = {bs:BS.t}
+type t = BS.t
 
 let default_id = "2049"
 
@@ -46,7 +47,6 @@ let init_unix () =
   Blkdev.add_provider default_id default_id
 
 let inited = ref false
-let 
 
 let init () = if (!inited) then return () else begin
     inited := true;
@@ -54,11 +54,25 @@ let init () = if (!inited) then return () else begin
     OS.Console.log("WARNING: hard-coded dependency on simple-unix-blkdev in persist.ml (needs Mirari fix)");
     init_unix() 
   end
+
+let bss = Hashtbl.create 10
   
 let get oid = 
-  let id = match None -> default_id | Some id -> id in
+  let id = match oid with 
+    | None -> default_id 
+    | Some id -> id in
   lwt () = init() in
-  lwt bs = BS.make id in
-  return {bs}
+  lwt bs = if Hashtbl.mem bss id then 
+    return (Hashtbl.find bss id)
+  else begin 
+    lwt () = try_lwt BS.init id
+    with ex -> begin 
+      OS.Console.log("BS.init error (may be initialised already)"); return () 
+    end in
+    lwt bs = BS.make id in
+    Hashtbl.replace bss id bs;
+    return bs
+  end in
+  return bs
 
-
+let _ = init()

@@ -33,6 +33,11 @@ open Printf
 module CL = Cohttp_lwt_mirage
 module C = Cohttp
 
+(* dbforms typeinfo *)
+let dbtypeinfos = Dbforms.([ 
+  { tname="user"; ttype=Model.type_of_user; tparent=None; pkname="email"; pktype=`User_defined }
+])
+
 module Resp = struct
 
   (* dynamic response *)
@@ -51,6 +56,7 @@ module Resp = struct
       | [] | [""] -> CL.Server.respond_redirect ~uri:(Uri.make ~path:"/index.html" ()) ()
       | ["do.login"] -> Login.handle_login ?body req "/home.html" "/login.html"
       | ["do.logout"] -> Login.handle_logout ?body req "/login.html"
+      | "db" :: path_elem -> Dbforms.dispatch ?body req path_elem dbtypeinfos
       | x -> OS.Console.log("Not found: "^(List.fold_left (fun ss s -> ss^"/"^s) "" x));
         CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
 end

@@ -28,6 +28,8 @@
 
 (* http sessions based on cookies *)
 
+module Store = Memorystore
+
 (* is Random good enough? *)
 let () = Random.self_init ()
 

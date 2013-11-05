@@ -26,13 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+open Dyntype
+open Cow
+
 (* user *)
-type t = {
+type user = {
   email: string;
   title: string;
   password: string
-} with Cow.json
+} with type_of, value, json
 
-(*let handle_user_create ?body req = *)
-   
 
