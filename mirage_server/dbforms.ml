@@ -100,7 +100,10 @@ let return_index req typeinfos =
       td (html_of_string (pname ti)); 
       actions ]) in
   let rows = List.map row typeinfos in
-  let html = List.flatten [title; table headings rows] in
+  let dump_link = html_of_link { text="Dump"; href="/db/dump.js" } in
+  let restore_link = html_of_link { text="Restore..."; href="/db/restore.html" } in
+  let html = List.flatten [title; table headings rows; <:html<<h2>Whole Database</h2>&>>; 
+    <:html<<p>$dump_link$</p>&>>; <:html<<p>$restore_link$</p>&>> ] in
   respond_html "Dbforms index" html
 
 exception Type_not_found
@@ -519,9 +522,101 @@ let return_delete req path_elems typeinfos =
   | Not_found -> 
     CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
 
+let return_dump typeinfos =
+  lwt db = Persist.get None in
+  lwt entries = DB.range_entries_latest db None true None false None in
+  let b = Buffer.create 10 in 
+  Buffer.add_string b "[";
+  let write (k,v) = 
+    if Buffer.length b > 1 then 
+      Buffer.add_string b ", "
+    else ();
+    Buffer.add_string b "{ \"k\":";
+    Json.to_buffer (Json.(String k)) b;
+    Buffer.add_string b ", \"v\":";
+    Buffer.add_string b v;
+    Buffer.add_string b " }"
+  in let _ = List.map write entries in
+  Buffer.add_string b "]";
+  let body = Buffer.contents b in
+  let headers = C.Header.init_with "Content-Type" "application/json" in
+  CL.Server.respond_string ~status:`OK ~headers ~body () 
+
+let return_restoreform req = 
+  let form = <:html<<form method="POST" action="do.restore" enctype="multipart/form-data">
+    <input type="file" name="file"></input>
+    <input type="submit" value="Restore DB"></input></form>&>> in
+  let heading = <:html<<h1>Restore database from dump</h1>&>> in
+  respond_html "Restore database from dump" (List.flatten [heading; form])
+
+let line_stream bstream = 
+  lwt fbuf = Lwt_stream.get bstream in
+  let ibuf = ref fbuf in
+  let ipos = ref 0 in
+  let b = Buffer.create 100 in
+  let rec more () =
+    match !ibuf with 
+    | None -> begin
+        if Buffer.length b = 0 then 
+          Lwt.return None
+        else begin 
+          let res = Buffer.contents b in
+          Buffer.clear b;
+          Lwt.return (Some res)
+        end
+      end
+    | Some s -> 
+      let len = String.length s in
+      try 
+        let nlpos = (String.index_from s !ipos '\n')+1 in
+        let cnt = nlpos - !ipos in
+        Buffer.add_substring b s !ipos cnt;
+        ipos := !ipos + cnt;
+        let res = Buffer.contents b in
+        Buffer.clear b;
+        Lwt.return (Some res) 
+      with Not_found ->
+        let cnt = len - !ipos in
+        if cnt > 0 then begin
+          Buffer.add_substring b s !ipos cnt;
+          ipos := !ipos + cnt
+        end;
+        lwt nbuf = Lwt_stream.get bstream in
+        ibuf := nbuf;
+        ipos := 0;
+        more ()
+  in Lwt.return (Lwt_stream.from more)
+
+(* value; parameter=pvale; ... *)
+(*let parse_header_value s : string * (string * string) list =
+  let parts = Re_str.split (Re_str.regexp "[ \t]*;[ \t]*") s = 
+  let sp part = 
+    let... *) 
+
+let return_restore ?body req =
+  let cto = C.Header.get (CL.Request.headers req) "content-type" in
+  begin match cto with 
+  | None -> OS.Console.log("Restore: No content-type")
+  | Some ct -> OS.Console.log("Restore: Content-type "^ct)
+  end;  
+  let bstream = Cohttp_lwt_body.stream_of_body body in
+  lwt lstream = line_stream bstream in
+  let rec get () = 
+    lwt l = Lwt_stream.get lstream in
+    match l with 
+    | None -> OS.Console.log("end of body"); 
+      Lwt.return ()
+    | Some l -> OS.Console.log("read line: "^l); 
+      get ()
+  in lwt () = get () in
+  respond_html "Restore" <:html<<h1>Restore</h1>...>>
+
 (* handle HTTP request *)
 let dispatch ?body req path_elems typeinfos = match path_elems with
   | [""] | [] -> return_index req typeinfos
+  | ["dump.js"] -> return_dump typeinfos
+  | ["restore.html"] -> return_restoreform req
+  | ["do.restore"] -> return_restore ?body req
   | _ ->
     (* check action *)
     let uri = CL.Request.uri req in

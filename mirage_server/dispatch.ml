@@ -57,7 +57,14 @@ module Resp = struct
       | [] | [""] -> CL.Server.respond_redirect ~uri:(Uri.make ~path:"/index.html" ()) ()
       | ["do.login"] -> Login.handle_login ?body req "/home.html" "/login.html"
       | ["do.logout"] -> Login.handle_logout ?body req "/login.html"
-      | "db" :: path_elem -> Dbforms.dispatch ?body req path_elem dbtypeinfos
+      | "db" :: path_elem -> 
+        let user = Login.get_authenticated_user req in
+        if user = Some "admin" then
+          Dbforms.dispatch ?body req path_elem dbtypeinfos
+        else if user = None then
+	  CL.Server.respond_redirect ~uri:(Uri.make ~path:"/login.html" ()) ()
+	else
+          CL.Server.respond_error ~status:C.Code.(`Unauthorized) ~body:"Only admin user may access db pages" ()
       | x -> OS.Console.log("Not found: "^(List.fold_left (fun ss s -> ss^"/"^s) "" x));
         CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
 end
