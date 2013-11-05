@@ -23,7 +23,6 @@ A content group (=> feed) has
 - a title
 - a version / subtitle
 - a last modified date/time
-- an URI
 - some content items...
 
 `/user/group:EMAIL,GROUPNAME`

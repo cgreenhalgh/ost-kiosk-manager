@@ -35,7 +35,8 @@ module C = Cohttp
 
 (* dbforms typeinfo *)
 let dbtypeinfos = Dbforms.([ 
-  { tname="user"; ttype=Model.type_of_user; tparent=None; pkname="email"; pktype=`User_defined }
+  { tname="user"; ttype=Model.type_of_user; tparent=None; pkname="email"; pktype=`User_defined };
+  { tname="group"; ttype=Model.type_of_group; tparent=Some "user"; pkname="gid"; pktype=`User_defined }
 ])
 
 module Resp = struct

@@ -32,8 +32,14 @@ open Cow
 (* user *)
 type user = {
   email: string;
-  title: string;
-  password: string
-} with type_of, value, json
+  utitle: string;
+  pw: string
+} with type_of, json
 
+type group = {
+  gid : string;
+  gtitle : string;
+  gver: string;
+  gdate: string
+} with type_of, json
 
