@@ -30,6 +30,8 @@
 open Lwt
 open Printf
 
+open Mime
+
 module CL = Cohttp_lwt_mirage
 module C = Cohttp
 
@@ -68,31 +70,6 @@ module Resp = struct
       | x -> OS.Console.log("Not found: "^(List.fold_left (fun ss s -> ss^"/"^s) "" x));
         CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
 end
-
-let header_content_type = "Content-Type"
-
-let content_type_html = "text/html"
-(*["content-type","application/atom+xml; charset=UTF-8"]*)
-
-let ext_regexp = Re_str.regexp "\\.\\([^./]+\\)$"
-
-let get_file_ext filename = try
-    let _ = Re_str.search_forward ext_regexp filename 0 in
-    Re_str.matched_group 1 filename 
-  with Not_found -> ""
-
-module StringMap = Map.Make(String)
-
-let file_ext_map =
-  let (=>) f g = g f in
-  let map = StringMap.empty =>
-  StringMap.add "html" content_type_html in
-  map
-
-(* may throw Not_found *)
-let rec guess_mime_type path = let ext = get_file_ext path in
-    OS.Console.log("request ext = "^ext^" - path = "^path);
-    StringMap.find ext file_ext_map
 
 let rec remove_empty_tail = function
   | [] | [""] -> []

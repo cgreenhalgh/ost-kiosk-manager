@@ -35,6 +35,7 @@ open Cow
 open Cow.Html
 module DB = Persist.DB
 module B = Baardskeerder
+open Mime
 
 type pktype = [ `User_defined ] (* TODO | `Auto_increment *)
 
@@ -47,9 +48,6 @@ type typeinfo = {
 }
 
 type typeinfos = typeinfo list
-
-let header_content_type = "Content-Type"
-let content_type_html = "text/html"
 
 let html_header = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" "^
   "\"http://www.w3c.org/TR/html4/loose.dtd\">\n"^
@@ -168,7 +166,6 @@ let return_list req path_elems typeinfos =
     lwt entries = DB.range_entries_latest db (Some key) true (Some key2) false None in
     OS.Console.log(Printf.sprintf "Found %d %s from %s-%s" (List.length entries) ti.tname key key2); 
 
-    let tname = html_of_string ti.tname in
     let titletext = if ti.tparent = None then "Dbforms list "^ti.tname 
       else "Dbforms list "^ti.tname^" of "^key in
     let title = <:html< <h1>$str:titletext$</h1> >> in
@@ -531,11 +528,11 @@ let return_dump typeinfos =
     if Buffer.length b > 1 then 
       Buffer.add_string b ", "
     else ();
-    Buffer.add_string b "{ \"k\":";
+    Buffer.add_string b "[";
     Json.to_buffer (Json.(String k)) b;
-    Buffer.add_string b ", \"v\":";
+    Buffer.add_string b ",";
     Buffer.add_string b v;
-    Buffer.add_string b " }"
+    Buffer.add_string b "]"
   in let _ = List.map write entries in
   Buffer.add_string b "]";
   let body = Buffer.contents b in
@@ -549,67 +546,54 @@ let return_restoreform req =
   let heading = <:html<<h1>Restore database from dump</h1>&>> in
   respond_html "Restore database from dump" (List.flatten [heading; form])
 
-let line_stream bstream = 
-  lwt fbuf = Lwt_stream.get bstream in
-  let ibuf = ref fbuf in
-  let ipos = ref 0 in
-  let b = Buffer.create 100 in
-  let rec more () =
-    match !ibuf with 
-    | None -> begin
-        if Buffer.length b = 0 then 
-          Lwt.return None
-        else begin 
-          let res = Buffer.contents b in
-          Buffer.clear b;
-          Lwt.return (Some res)
-        end
-      end
-    | Some s -> 
-      let len = String.length s in
-      try 
-        let nlpos = (String.index_from s !ipos '\n')+1 in
-        let cnt = nlpos - !ipos in
-        Buffer.add_substring b s !ipos cnt;
-        ipos := !ipos + cnt;
-        let res = Buffer.contents b in
-        Buffer.clear b;
-        Lwt.return (Some res) 
-      with Not_found ->
-        let cnt = len - !ipos in
-        if cnt > 0 then begin
-          Buffer.add_substring b s !ipos cnt;
-          ipos := !ipos + cnt
-        end;
-        lwt nbuf = Lwt_stream.get bstream in
-        ibuf := nbuf;
-        ipos := 0;
-        more ()
-  in Lwt.return (Lwt_stream.from more)
-
-(* value; parameter=pvale; ... *)
-(*let parse_header_value s : string * (string * string) list =
-  let parts = Re_str.split (Re_str.regexp "[ \t]*;[ \t]*") s = 
-  let sp part = 
-    let... *) 
+exception Bad_request of string
 
 let return_restore ?body req =
-  let cto = C.Header.get (CL.Request.headers req) "content-type" in
-  begin match cto with 
-  | None -> OS.Console.log("Restore: No content-type")
-  | Some ct -> OS.Console.log("Restore: Content-type "^ct)
-  end;  
-  let bstream = Cohttp_lwt_body.stream_of_body body in
-  lwt lstream = line_stream bstream in
-  let rec get () = 
-    lwt l = Lwt_stream.get lstream in
-    match l with 
-    | None -> OS.Console.log("end of body"); 
-      Lwt.return ()
-    | Some l -> OS.Console.log("read line: "^l); 
-      get ()
-  in lwt () = get () in
-  respond_html "Restore" <:html<<h1>Restore</h1>...>>
+  try 
+    lwt (parts,metas) = read_multipart_body ?body (CL.Request.headers req) in
+    (*List.map (fun (pn,(pv::_)) -> OS.Console.log("multipart part "^pn^" = "^pv)) parts;*)
+    let file = Login.get_one_value parts "file" in
+    let jval = Json.of_string file in
+    lwt db = Persist.get None in
+    let ok = ref 0 and
+      err = ref 0 in
+    let output = Buffer.create 10 in
+    let restore_fn tx = 
+      match jval with 
+      | Json.Array es -> begin
+          let rec rset es = match es with 
+          | (Json.Array ((Json.String k) :: v :: [])) :: es -> 
+            lwt _ = DB.set tx k (Json.to_string v) in 
+	    ok := !ok + 1;
+            rset es
+          | v :: es ->
+            err := !err + 1;
+            Buffer.add_string output "restore: ignore unsupported entry  ";
+ 	    Buffer.add_string output (Json.to_string v);
+            Buffer.add_string output "\n";
+            rset es
+          | [] -> Lwt.return (B.OK "")
+          in rset es
+        end
+      | v -> 
+        err := !err + 1;
+        Buffer.add_string output "restore: unsupported file type\n";
+        Buffer.add_string output file;
+        Buffer.add_string output "\n";
+        Lwt.return (B.NOK "")
+    in lwt _ = DB.with_tx db restore_fn in
+    let log = Buffer.contents output in
+    let msg = Printf.sprintf "Restore: OK %d; Error %d" !ok !err in
+    OS.Console.log(msg);
+    respond_html "Restore" <:html<<h1>Restore</h1><p>$str:msg$</p>$str:log$>>
+  with Bad_request m -> 
+    CL.Server.respond_error ~status:`Bad_request ~body:m ()
+  | Invalid_content_type m -> 
+    CL.Server.respond_error ~status:`Bad_request ~body:("Invalid content type: "^m) ()
+  | Not_found ->
+    CL.Server.respond_error ~status:`Not_found ~body:"Not found exception" ()
+  | Json.Runtime_error (m,v) ->
+    CL.Server.respond_error ~status:`Bad_request ~body:("Problem with uploaded data: "^m) ()
 
 (* handle HTTP request *)
 let dispatch ?body req path_elems typeinfos = match path_elems with
