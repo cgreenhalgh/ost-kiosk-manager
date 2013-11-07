@@ -1,18 +1,46 @@
 <!DOCTYPE html>
+<!--[if IE 8]> 				 <html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <html>
 <head>
-  <meta charset=utf-8>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
   <title>Application</title>
+  
+  <!-- Foundation layout -->
+  <link rel="stylesheet" href="css/foundation.css">
+  <script src="js/vendor/custom.modernizr.js"></script>
+
   <!-- Require the main Stitch file -->
   <script src="/application.js" type="text/javascript" charset="utf-8"></script>
   <script type="text/javascript" charset="utf-8">
     document.addEventListener("DOMContentLoaded", function(){
+      console.log("Running app...");
       var App = require("app");
       App.init();
     }, false);
   </script>
 </head>
 <body>
+
+	<!-- Foundation Test content -->
+	<div class="row">
+		<div class="large-12 columns">
+			<h2>Testing Foundation Layout</h2>
+			<p>From version 4.3.2.</p>
+			<hr />
+		</div>
+	</div>
+
+  <!-- Foundation JS bootstrap -->
+  <script>
+  document.write('<script src=' +
+  ('__proto__' in {} ? 'js/vendor/zepto' : 'js/vendor/jquery') +
+  '.js><\/script>')
+  </script>
+  
+  <script src="js/foundation.min.js"></script>
+
 </body>
 </html>
 

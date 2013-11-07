@@ -17,12 +17,13 @@ Get dependencies:
 npm install coffee-script stitch express eco
 ```
 
-Build/run:
+Export the assembled application.js:
+```
+coffee build.coffee
+```
+
+Runs as server on [port 9294](http://127.0.0.1:9294) by default:
 ```
 coffee index.coffee
 ```
-
-Runs as server on [port 9294](http://127.0.0.1:9294) by default.
-
-Export the assembled application.ks:
 

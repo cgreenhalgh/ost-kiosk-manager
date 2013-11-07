@@ -1,3 +1,2 @@
-# from http://arcturo.github.io/library/coffeescript/06_applications.html
 <label>Name: <%= @name %></label>
 
