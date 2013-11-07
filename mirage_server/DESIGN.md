@@ -54,3 +54,39 @@ A device deployment has
 - a device id?
 - a set of groups (IDs)
 
+## Client API
+
+in v1 I'll assume it gets userid from session or basic authentication, i.e. via headers. So top-level will be groups.
+
+```
+curl ...
+  --basic
+  --data DATA or --data-ascii DATA - POST
+  --header LINE
+  --request COMMAND
+  --user USER:PASS
+  --verbose
+'''
+
+'''
+curl -v --request GET --user admin:password http://127.0.0.1:8080/api/group/
+
+curl -v --request GET --user admin:password http://127.0.0.1:8080/api/group/testgp1
+
+curl -v --request POST --user admin:password \
+ -data-ascii '{"gid":"testgp1", "gtitle":"Test Group 1", "gver":"1", "gdate":"2013-11-07T21:31:00Z"}' \
+ http://127.0.0.1:8080/api/group/
+
+curl -v --request GET --user admin:password http://127.0.0.1:8080/api/group/testgp1
+
+curl -v --request PUT --user admin:password \
+ -data-ascii '{"gid":"testgp1", "gtitle":"Test Group 1b", "gver":"2", "gdate":"2013-11-07T21:33:00Z"}' \
+ http://127.0.0.1:8080/api/group/
+
+curl -v --request GET --user admin:password http://127.0.0.1:8080/api/group/testgp1
+
+curl -v --request DELETE --user admin:password http://127.0.0.1:8080/api/group/testgp1
+
+curl -v --request GET --user admin:password http://127.0.0.1:8080/api/group/testgp1
+```
+

@@ -46,10 +46,50 @@ let get_authenticated_user req =
   let username = Session.get_session_value headers session_username in
   username
 
+let check_user_and_pass username password = 
+  (* built-in/bootstrap admin user *)
+  if username=admin_username && password=admin_password then true 
+  else begin
+    (* TODO authenticate local user accounts *)
+    false
+  end
+
+let get_authenticated_api_user req =
+  (* let's try basic authentication for now *)
+  let headers = CL.Request.headers req in 
+  let auth = C.Header.get_authorization headers in
+  match auth with 
+  | Some C.Auth.Basic (username,password) -> 
+    if check_user_and_pass username password then Some username
+    else begin 
+      OS.Console.log("authentication failure for api "^username);
+      None
+    end
+  | _ -> None 
+  
 let respond_error req status message = 
   OS.Console.log("Return error "^(string_of_status status)^": "
     ^message^" for "^(Uri.path (CL.Request.uri req)));
   CL.Server.respond_error status message ()
+
+let respond_user_not_authorized req =
+  CL.Server.respond_redirect ~uri:(Uri.make ~path:"/login.html" ()) ()
+
+let respond_user_forbidden req =
+  CL.Server.respond_error ~status:`Forbidden ~body:"You do not have permission to access this" ()
+
+let respond_api_not_authorized req =
+  let headers = C.Header.init () in
+  let realm = 
+    let oh = Uri.host (CL.Request.uri req) in match oh with
+    | Some h -> h
+    | None -> "nonesuch" in
+  let headers = C.Header.add_authorization_req headers C.Auth.(`Basic realm) in
+  CL.Server.respond ~headers ~status:`Unauthorized ~body:(Cohttp_lwt_body.body_of_string "Not Authorized") ()
+
+let respond_api_forbidden req =
+  CL.Server.respond_error `Forbidden "Forbidden" ()
+
 
 let get_one_value formvalues name = 
     let rec rget2 res n vs = if n=name then match vs with 
@@ -79,7 +119,7 @@ let handle_login ?body req success_path failure_path =
       let password = get_one_value formvalues form_password in
       if (String.length username)=0 then 
         respond_error req `Bad_request ("User name not specified in "^body)
-      else if username=admin_username && password=admin_password then begin
+      else if check_user_and_pass username password then begin
         (* built-in/bootstrap admin user *)
         let respheaders = ref (C.Header.init ()) in 
 	let id = Session.get_session_id headers in

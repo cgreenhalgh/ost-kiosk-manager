@@ -64,9 +64,16 @@ module Resp = struct
         if user = Some "admin" then
           Dbforms.dispatch ?body req path_elem dbtypeinfos
         else if user = None then
-	  CL.Server.respond_redirect ~uri:(Uri.make ~path:"/login.html" ()) ()
+          Login.respond_user_not_authorized req
 	else
-          CL.Server.respond_error ~status:C.Code.(`Unauthorized) ~body:"Only admin user may access db pages" ()
+          Login.respond_user_forbidden req
+      | "api" :: path_elem ->
+        let user = Login.get_authenticated_api_user req in
+        begin match user with 
+          | None -> Login.respond_api_not_authorized req
+          | Some user ->
+            Dbrest.dispatch ?body req path_elem dbtypeinfos user
+        end
       | x -> OS.Console.log("Not found: "^(List.fold_left (fun ss s -> ss^"/"^s) "" x));
         CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
 end
