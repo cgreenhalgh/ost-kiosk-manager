@@ -1,4 +1,5 @@
 User = require("models/user")
+ListView = require 'backbonetest'
 
 App =
   init: ->
@@ -9,5 +10,8 @@ App =
     element = document.createElement("div")
     element.innerHTML = view
     document.body.appendChild(element)
+
+    # backbonetest
+    list_view = new ListView
 
 module.exports = App
