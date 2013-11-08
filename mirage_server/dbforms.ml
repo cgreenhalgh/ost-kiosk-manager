@@ -36,18 +36,7 @@ open Cow.Html
 module DB = Persist.DB
 module B = Baardskeerder
 open Mime
-
-type pktype = [ `User_defined ] (* TODO | `Auto_increment *)
-
-type typeinfo = {
-  tname : string;
-  ttype : Dyntype.Type.t;
-  tparent : string option;
-  pkname : string;
-  pktype : pktype
-}
-
-type typeinfos = typeinfo list
+open Dbcommon
 
 let html_header = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" "^
   "\"http://www.w3c.org/TR/html4/loose.dtd\">\n"^
@@ -104,58 +93,11 @@ let return_index req typeinfos =
     <:html<<p>$dump_link$</p>&>>; <:html<<p>$restore_link$</p>&>> ] in
   respond_html "Dbforms index" html
 
-exception Type_not_found
-
-(* get type for path T1/id1/T2/id2/...; raises Not_found *)
-let rec get_typeinfo typeinfos path_elems = match path_elems with
- | tn :: _ :: [] -> 
-   let rec rget tis = begin match tis with 
-     | [] -> raise Type_not_found
-     | ti :: rest -> if (ti.tname=tn) then ti else rget rest
-   end in
-   rget typeinfos
- | rn :: _ :: rest -> get_typeinfo typeinfos rest
- | _ -> raise Not_found
-
-let get_key path_elems =
-  let keybuf = Buffer.create 100 in
-  let keyidbuf = Buffer.create 100 in
-  let rec build_key pels = match pels with
-    | tn :: "" :: [] -> 
-      Buffer.add_string keybuf "/";
-      Buffer.add_string keybuf tn;
-      if Buffer.length keyidbuf > 0 then Buffer.add_string keyidbuf ","
-    | ptn :: pk :: rest -> 
-      Buffer.add_string keybuf "/";
-      Buffer.add_string keybuf ptn;
-      if Buffer.length keyidbuf > 0 then Buffer.add_string keyidbuf ",";
-        (* path element should be encoded already *)
-        for i=0 to (String.length pk)-1 do
-          let c = String.get pk i in 
-          if c=',' || c='/' || c=':' || c='%' then begin
-            OS.Console.log("get_key with invalid path id element "^pk);
-            raise Not_found
-          end
-        done;
-      Buffer.add_string keyidbuf pk;
-      begin match rest with 
-      | [] -> ()
-      | x -> build_key rest end
-    | _ -> begin 
-        OS.Console.log("get_key with unbalanced elements "^(List.fold_left (fun r s -> r^"<"^s^">") " " path_elems)^" after "^(Buffer.contents keybuf)^":"^(Buffer.contents keyidbuf)); 
-        raise Not_found
-      end
-  in build_key path_elems;
-  Buffer.add_string keybuf ":";
-  Buffer.add_buffer keybuf keyidbuf;
-  Buffer.contents keybuf
-
 let button_form label action = 
   <:html<<form method="POST" action="$str:action$"><input type="submit" value="$str:label$"></input></form>&>>
 
 let return_list req path_elems typeinfos =
   (* check type/path *)
-  try
     let ti = get_typeinfo typeinfos path_elems in
     (* TODO check type parent(s) *)
     let key = get_key path_elems in 
@@ -222,14 +164,9 @@ let return_list req path_elems typeinfos =
     let add = button_form "Add..." add_action in
     let html = List.flatten [title; back_link; table headings rows; add] in
     respond_html titletext html
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
 
 let return_addform req path_elems typeinfos =
   (* check type/path *)
-  try
     let ti = get_typeinfo typeinfos path_elems in
     (* TODO check type parent(s) *)
     let tname = html_of_string ti.tname in
@@ -260,10 +197,6 @@ let return_addform req path_elems typeinfos =
     let form xs = <:html<<form method="POST" action=$str:action$>$list:xs$</form>&>> in
     let html = List.flatten [title; back_link; form [table headings rows; submit]] in
     respond_html ("Dbforms Add "^ti.tname) html
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
 
 exception Unimplemented of string
 
@@ -280,7 +213,6 @@ let encode_id id =
   Buffer.contents b
 
 let return_add ?body req path_elems typeinfos =
-  try_lwt
     let ti = get_typeinfo typeinfos path_elems in
     lwt body = Cohttp_lwt_body.string_of_body body in 
     if not(CL.Request.is_form req) then 
@@ -338,15 +270,8 @@ let return_add ?body req path_elems typeinfos =
         CL.Server.respond_redirect ~uri:redir ()
         (*CL.Server.respond_error ~status:`Bad_request ~body:(ti.tname^" "^key^" already exists") ()*) 
     end
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
-  | Unimplemented f -> 
-    CL.Server.respond_error ~status:`Not_implemented ~body:("Dbforms feature: "^f) () 
 
 let return_view req path_elems typeinfos =
-  try
     let uri = CL.Request.uri req in
     let path = Uri.path uri in
     OS.Console.log("view "^path);
@@ -357,7 +282,7 @@ let return_view req path_elems typeinfos =
     lwt db = Persist.get None in 
     lwt res = DB.get_latest db key in
     let sval = match res with 
-     | B.NOK _ -> OS.Console.log("Not found: "^key); raise Not_found
+     | B.NOK _ -> raise (HttpError(`Not_found,("Key = "^key)))
      | B.OK sval -> sval in
     let jval = Json.of_string sval in
     (* table *)
@@ -401,19 +326,14 @@ let return_view req path_elems typeinfos =
     let chrows = List.map chrow typeinfos in
     let html = List.flatten [title; back_link; table headings rows; edit; delete; table chheadings chrows] in
     respond_html ("Dbforms View "^ti.tname^" "^key) html
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
 
 let return_editform req path_elems typeinfos =
-  try
     let ti = get_typeinfo typeinfos path_elems in
     let key = get_key path_elems in
     lwt db = Persist.get None in 
     lwt res = DB.get_latest db key in
     let sval = match res with 
-     | B.NOK _ -> raise Not_found
+     | B.NOK _ -> raise(HttpError(`Not_found,("edit key "^key)))
      | B.OK sval -> sval in
     let jval = Json.of_string sval in
     (* table *)
@@ -440,14 +360,9 @@ let return_editform req path_elems typeinfos =
     let form xs = <:html<<form method="POST" action="$str:action$">$list:xs$</form>&>> in
     let html = List.flatten [title; back_link; form [table headings rows; submit]] in
     respond_html ("Dbforms Edit "^ti.tname^" "^key) html
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
 
 
 let return_edit ?body req path_elems typeinfos =
-  try_lwt
     let ti = get_typeinfo typeinfos path_elems in
     let key = get_key path_elems in
     lwt body = Cohttp_lwt_body.string_of_body body in 
@@ -486,16 +401,8 @@ let return_edit ?body req path_elems typeinfos =
       | B.NOK _ -> 
         Lwt.fail Not_found
     end
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
-  | Unimplemented f -> 
-    CL.Server.respond_error ~status:`Not_implemented ~body:("Dbforms feature: "^f) () 
-
 
 let return_delete req path_elems typeinfos =
-  try
     let key = get_key path_elems in
     lwt db = Persist.get None in 
     let dodelete tx = begin
@@ -513,11 +420,7 @@ let return_delete req path_elems typeinfos =
     | B.OK _ -> OS.Console.log("Deleted "^key);
       let list_uri = Uri.make ~path:ppath ~query:["action",["list"];"message",["Deleted"]] () in
       CL.Server.respond_redirect ~uri:list_uri ()
-    | B.NOK _ -> OS.Console.log("not deleted - Not found: "^key); raise Not_found
-  with Type_not_found -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms type") ()    
-  | Not_found -> 
-    CL.Server.respond_error ~status:`Not_found ~body:("Not found") ()    
+    | B.NOK _ -> raise (HttpError(`Not_found,("delete key "^key)))
 
 let return_dump typeinfos =
   lwt db = Persist.get None in
@@ -546,10 +449,7 @@ let return_restoreform req =
   let heading = <:html<<h1>Restore database from dump</h1>&>> in
   respond_html "Restore database from dump" (List.flatten [heading; form])
 
-exception Bad_request of string
-
 let return_restore ?body req =
-  try 
     lwt (parts,metas) = read_multipart_body ?body (CL.Request.headers req) in
     (*List.map (fun (pn,(pv::_)) -> OS.Console.log("multipart part "^pn^" = "^pv)) parts;*)
     let file = Login.get_one_value parts "file" in
@@ -586,17 +486,11 @@ let return_restore ?body req =
     let msg = Printf.sprintf "Restore: OK %d; Error %d" !ok !err in
     OS.Console.log(msg);
     respond_html "Restore" <:html<<h1>Restore</h1><p>$str:msg$</p>$str:log$>>
-  with Bad_request m -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:m ()
-  | Invalid_content_type m -> 
-    CL.Server.respond_error ~status:`Bad_request ~body:("Invalid content type: "^m) ()
-  | Not_found ->
-    CL.Server.respond_error ~status:`Not_found ~body:"Not found exception" ()
-  | Json.Runtime_error (m,v) ->
-    CL.Server.respond_error ~status:`Bad_request ~body:("Problem with uploaded data: "^m) ()
 
 (* handle HTTP request *)
-let dispatch ?body req path_elems typeinfos = match path_elems with
+let dispatch ?body req path_elems typeinfos = 
+try_lwt
+  match path_elems with
   | [""] | [] -> return_index req typeinfos
   | ["dump.js"] -> return_dump typeinfos
   | ["restore.html"] -> return_restoreform req
@@ -609,13 +503,13 @@ let dispatch ?body req path_elems typeinfos = match path_elems with
     let meth = CL.Request.meth req in
     match action,meth with 
     | "list",_ -> 
-      return_list req path_elems typeinfos
+        return_list req path_elems typeinfos
     | "addform",_ ->
       return_addform req path_elems typeinfos
     | "add",`POST -> 
       return_add ?body req path_elems typeinfos
     | "add",_ -> 
-      CL.Server.respond_error ~status:`Method_not_allowed ~body:"Dbforms action add requires POST" ()
+      raise (HttpError(`Method_not_allowed,"Dbforms action add requires POST"))
     | "view",_ -> 
       return_view req path_elems typeinfos
     | "editform",_ ->
@@ -623,13 +517,24 @@ let dispatch ?body req path_elems typeinfos = match path_elems with
     | "delete",`POST -> 
       return_delete req path_elems typeinfos
     | "delete",_ -> 
-      CL.Server.respond_error ~status:`Method_not_allowed ~body:"Dbforms action delete requires POST" ()
+      raise (HttpError(`Method_not_allowed,"Dbforms action delete requires POST"))
     | "edit",`POST -> 
       return_edit ?body req path_elems typeinfos
     | "edit",_ -> 
-      CL.Server.respond_error ~status:`Method_not_allowed ~body:"Dbforms action edit requires POST" ()
+      raise (HttpError(`Method_not_allowed,"Dbforms action edit requires POST"))
     | "",_ ->
-      CL.Server.respond_error ~status:`Bad_request ~body:"Dbforms action not specified" ()
+      raise (HttpError(`Bad_request,"Dbforms action not specified"))
     | x,_ ->
-      CL.Server.respond_error ~status:`Bad_request ~body:("Unknown Dbforms action "^x) ()
-  
+      raise (HttpError(`Bad_request,("Dbforms action unknown: "^x)))
+with 
+    Invalid_content_type m -> 
+    CL.Server.respond_error ~status:`Bad_request ~body:("Invalid content type: "^m) ()
+  | Json.Runtime_error (m,v) ->
+    CL.Server.respond_error ~status:`Bad_request ~body:("Problem with uploaded Json data: "^m) ()
+  | HttpError (status,body) ->
+    CL.Server.respond_error ~status ~body ()
+  | Unimplemented x -> 
+    CL.Server.respond_error ~status:`Not_implemented ~body:("Sorry, not implemented: "^x) ()
+  | e -> 
+    CL.Server.respond_error ~status:`Internal_server_error ~body:"Server error" ()
+    

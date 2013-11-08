@@ -41,6 +41,11 @@ let admin_password = "password"
 
 let session_username = "authenticatedusername"
 
+let authenticators = ref []
+
+let add_authenticator (fn:string * string -> bool Lwt.t) = 
+  authenticators := fn :: !authenticators
+
 let get_authenticated_user req =
   let headers = CL.Request.headers req in 
   let username = Session.get_session_value headers session_username in
@@ -48,10 +53,17 @@ let get_authenticated_user req =
 
 let check_user_and_pass username password = 
   (* built-in/bootstrap admin user *)
-  if username=admin_username && password=admin_password then true 
+  if username=admin_username && password=admin_password then 
+    Lwt.return true 
   else begin
-    (* TODO authenticate local user accounts *)
-    false
+    (* authenticate local user accounts *)
+    let rec fn authenticators = match authenticators with
+    | [] -> Lwt.return false
+    | a :: rest -> 
+      lwt ok = a (username, password) in
+      if ok then Lwt.return true 
+      else fn rest
+    in fn !authenticators
   end
 
 let get_authenticated_api_user req =
@@ -60,12 +72,13 @@ let get_authenticated_api_user req =
   let auth = C.Header.get_authorization headers in
   match auth with 
   | Some C.Auth.Basic (username,password) -> 
-    if check_user_and_pass username password then Some username
+    lwt ok = check_user_and_pass username password in
+    if ok then Lwt.return (Some username)
     else begin 
       OS.Console.log("authentication failure for api "^username);
-      None
+      Lwt.return None
     end
-  | _ -> None 
+  | _ -> Lwt.return None 
   
 let respond_error req status message = 
   OS.Console.log("Return error "^(string_of_status status)^": "
@@ -119,29 +132,31 @@ let handle_login ?body req success_path failure_path =
       let password = get_one_value formvalues form_password in
       if (String.length username)=0 then 
         respond_error req `Bad_request ("User name not specified in "^body)
-      else if check_user_and_pass username password then begin
-        (* built-in/bootstrap admin user *)
-        let respheaders = ref (C.Header.init ()) in 
-	let id = Session.get_session_id headers in
-        let id = begin match id with 
-        | None -> 
-	  let id = Session.new_id () in
-          (* set new cookie *)
-          let hname,hvalue = Session.make_session_cookie headers id in
-          OS.Console.log("set cookie "^hname^": "^hvalue);
-          respheaders := C.Header.add !respheaders hname hvalue;
-          id
-        | Some id -> id
-        end in
-        Session.set_session_value ~id headers session_username username (Some 3600.);
-	OS.Console.log("Successful login as "^username);
-        let uri = Uri.make ~path:success_path () in
-        OS.Console.log("Redirect to "^(Uri.to_string uri));
-        CL.Server.respond_redirect ~headers:(!respheaders) ~uri ()
-      end else begin
-        OS.Console.log("User name / password combination incorrect or unknown for "^username);
-        let uri = Uri.make ~path:failure_path () in
-        CL.Server.respond_redirect ~headers ~uri ()
+      else begin
+        lwt ok = check_user_and_pass username password in
+        if ok then begin
+          let respheaders = ref (C.Header.init ()) in 
+	  let id = Session.get_session_id headers in
+          let id = begin match id with 
+          | None -> 
+	    let id = Session.new_id () in
+            (* set new cookie *)
+            let hname,hvalue = Session.make_session_cookie headers id in
+            OS.Console.log("set cookie "^hname^": "^hvalue);
+            respheaders := C.Header.add !respheaders hname hvalue;
+            id
+          | Some id -> id
+          end in
+          Session.set_session_value ~id headers session_username username (Some 3600.);
+  	  OS.Console.log("Successful login as "^username);
+          let uri = Uri.make ~path:success_path () in
+          OS.Console.log("Redirect to "^(Uri.to_string uri));
+          CL.Server.respond_redirect ~headers:(!respheaders) ~uri ()
+        end else begin
+          OS.Console.log("User name / password combination incorrect or unknown for "^username);
+          let uri = Uri.make ~path:failure_path () in
+          CL.Server.respond_redirect ~headers ~uri ()
+        end
       end
     end
   | m -> 

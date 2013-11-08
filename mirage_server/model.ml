@@ -28,18 +28,34 @@
 
 open Dyntype
 open Cow
+module DB = Persist.DB
+module B = Baardskeerder
 
 (* user *)
 type user = {
   email: string;
-  utitle: string;
-  pw: string
+  mutable utitle: string;
+  mutable pw: string
 } with type_of, json
+
+let authenticator = function (username, password) -> 
+  lwt db = Persist.get None in
+  let key = Dbcommon.get_key ["user"; username] in 
+  lwt ruser = DB.get_latest db key in
+  match ruser with
+  | B.OK v -> begin try 
+        let user = user_of_json (Json.of_string v) in
+        Lwt.return (password = user.pw)
+      with ex -> OS.Console.log("Error checking user "^username^" ("^v^"): "^(Printexc.to_string ex));
+        Lwt.return false
+    end
+  | B.NOK _ -> Lwt.return false
 
 type group = {
   gid : string;
-  gtitle : string;
-  gver: string;
-  gdate: string
+  mutable gtitle : string;
+  mutable gver: string;
+  mutable gdate: string;
+  gtestimmutable: string
 } with type_of, json
 

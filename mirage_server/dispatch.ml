@@ -36,10 +36,13 @@ module CL = Cohttp_lwt_mirage
 module C = Cohttp
 
 (* dbforms typeinfo *)
-let dbtypeinfos = Dbforms.([ 
+let dbtypeinfos = Dbcommon.([ 
   { tname="user"; ttype=Model.type_of_user; tparent=None; pkname="email"; pktype=`User_defined };
   { tname="group"; ttype=Model.type_of_group; tparent=Some "user"; pkname="gid"; pktype=`User_defined }
 ])
+
+let _ = (* allow login against local accounts *)
+  Login.add_authenticator Model.authenticator
 
 module Resp = struct
 
@@ -68,11 +71,12 @@ module Resp = struct
 	else
           Login.respond_user_forbidden req
       | "api" :: path_elem ->
-        let user = Login.get_authenticated_api_user req in
+        lwt user = Login.get_authenticated_api_user req in
         begin match user with 
           | None -> Login.respond_api_not_authorized req
           | Some user ->
-            Dbrest.dispatch ?body req path_elem dbtypeinfos user
+            (* NB prefix user - this is all the security for now *)
+            Dbrest.dispatch ?body req ("user" :: user :: path_elem) dbtypeinfos user
         end
       | x -> OS.Console.log("Not found: "^(List.fold_left (fun ss s -> ss^"/"^s) "" x));
         CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
