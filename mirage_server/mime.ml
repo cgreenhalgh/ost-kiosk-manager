@@ -33,6 +33,8 @@ module C = Cohttp
 let header_content_type = "Content-Type"
 
 let content_type_html = "text/html"
+let content_type_javascript = "application/javascript"
+let content_type_css = "text/css"
 (*["content-type","application/atom+xml; charset=UTF-8"]*)
 
 (* file extensions... *)
@@ -48,7 +50,9 @@ module StringMap = Map.Make(String)
 let file_ext_map =
   let (=>) f g = g f in
   let map = StringMap.empty =>
-  StringMap.add "html" content_type_html in
+  StringMap.add "html" content_type_html =>
+  StringMap.add "css" content_type_css =>
+  StringMap.add "js" content_type_javascript in
   map
 
 (* may throw Not_found *)

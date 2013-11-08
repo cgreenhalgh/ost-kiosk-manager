@@ -2,9 +2,6 @@
 
 require("coffee-script")
 stitch  = require("stitch")
-# for web server only
-#express = require("express")
-# for compile only
 fs = require('fs')
 argv    = process.argv.slice(2)
 
@@ -21,24 +18,10 @@ pckg = stitch.createPackage(
 # the file export...
 pckg.compile(
   (err, source) ->
-    fs.writeFile('application.js', source, 
+    fs.writeFile('public/application.js', source, 
       (err) ->
         if (err) then throw err
-        console.log('Compiled application.js')
+        console.log('Compiled public/application.js')
     )
 )
 
-# the web-server...
-#
-#app = express.createServer()
-#
-#app.configure ->
-#  app.set "views", __dirname + "/views"
-#  app.use app.router
-#  app.use express.static(__dirname + "/public")
-#  app.get "/application.js", pckg.createServer()
-#
-#port = argv[0] or process.env.PORT or 9294
-#console.log "Starting server on port: #{port}"
-#app.listen port
-#

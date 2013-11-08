@@ -112,6 +112,28 @@ let t conn_id ?body req =
        with Not_found -> C.Header.init ()
      in
      CL.Server.respond_string ~headers ~status:`OK ~body ()
-  |None ->
-     Resp.dispatch ?body req path_elem
+  |None -> begin
+      match path_elem with 
+      | "app" :: path_elem -> begin 
+          (* app stuff... *)
+          let apppath = String.sub path 4 ((String.length path) - 4) in
+          lwt app = OS.Devices.find_kv_ro "app" >>=
+            function
+            | None   -> Printf.printf "fatal error, app kv_ro not found\n%!"; exit 1
+            | Some x -> return x in
+          match_lwt app#read apppath with
+          | Some body ->
+            lwt body = Util.string_of_stream body in
+            let headers =
+              try 
+                C.Header.init_with header_content_type (guess_mime_type path)
+              with Not_found -> C.Header.init ()
+            in
+              CL.Server.respond_string ~headers ~status:`OK ~body ()
+          | None -> 
+            CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
+        end
+      | _ ->
+        Resp.dispatch ?body req path_elem
+  end
 

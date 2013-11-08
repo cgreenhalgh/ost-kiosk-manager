@@ -15,19 +15,26 @@ opam repo add dev https://github.com/cgreenhalgh/opam-dev-repository.git
 
 Mirage will build applications to run under Unix or directly on the [Xen](http://www.xenproject.org) Hypervisor. To build for unix try:
 ```
+cd browser_client
+coffee build.coffee
 cd mirage_server
-mirari configure --unix
-mirari build --unix
+mirari configure --unix --socket
+mirari build --unix --socket
 ```
 The server uses a virtual disk for persistence; you can create an (empty) bootstrap file with 
 ```
-dd if=/dev/zero of=diskfile bs=4096 count=256
+dd if=/dev/zero of=2049 bs=4096 count=256
 ```
+Or (Unix only) just `touch 2049`. (2049 is the decimal major/minor device number for /dev/sda1 on Linux.)
+
 You should then be able to run the server with:
+```
+./main.native
+```
+or, most likely if trying direct sockets, 
 ```
 sudo `which mirari` run --unix
 ```
-
 Build for Xen is similar:
 ```
 cd mirage_server
@@ -39,4 +46,4 @@ As of 2013-10-28 Mirari won't correctly configure the Xen VM with Xen 4.1+, so y
 sudo xl create -c mirage_server.myxl
 ```
 
-Status: starting initial development.
+Status: initial test application with users and groups in database, and admin DB forms interface. Browser app skeleton only.
