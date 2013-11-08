@@ -21,6 +21,7 @@ pckg = stitch.createPackage(
 # the file export...
 pckg.compile(
   (err, source) ->
+    if (err) then throw err
     fs.writeFile('public/application.js', source, 
       (err) ->
         if (err) then throw err

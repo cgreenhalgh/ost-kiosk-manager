@@ -1,17 +1,14 @@
-User = require("models/user")
-ListView = require 'backbonetest'
+GroupListView = require("views/grouplistview")
 
 App =
   init: ->
-    template = require("views/users/show")
-    view     = template(new User("Brian"))
 
-    # Obviously this could be spruced up by jQuery
-    element = document.createElement("div")
-    element.innerHTML = view
-    document.body.appendChild(element)
+    # backbonetest - based on 
+    # http://adamjspooner.github.io/coffeescript-meet-backbonejs/05/docs/script.html
+    Backbone.sync = (method, model, success, error) ->
+      success()
 
-    # backbonetest
-    list_view = new ListView
+    #list_view = new ListView
+    group_list_view = new GroupListView
 
 module.exports = App
