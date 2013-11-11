@@ -25,6 +25,29 @@
 </head>
 <body>
 
+  <!-- zurb top bar -->
+  <nav class="top-bar">
+    <ul class="title-area">
+      <!-- Title Area -->
+      <li class="name">
+        <h1><a href="groups">OST Kiosk Manager</a></h1>
+      </li>
+      <!-- Remove the class "menu-icon" to get rid of menu icon. Take out "Menu" to just have icon alone -->
+      <li class="toggle-topbar menu-icon"><a href=""><span>Menu</span></a></li>
+    </ul>
+
+    <section class="top-bar-section">
+      <!-- Left Nav Section -->
+      <ul class="right">
+        <!-- <li class=""><a href="login">Logout</a></li> -->
+      </ul>
+    </section>
+  </nav>
+
+  <!-- zurb breadcrumbs -->
+  <ul class="breadcrumbs">
+  </ul>
+
   <!-- overall page structure -->
   <div class="row">
     <!-- main view container -->
@@ -33,11 +56,13 @@
       <!--<div id="section_groups">-->
         <!-- groups, title -->
         <div class="row">
-           <div class="large-1 small-1 columns home"><!-- home --></div>
-           <div class="large-6 small-10 columns"><h1>Groups</h1></div>
-           <div class="large-1 small-1 columns">
-             <!-- add group --><button class="button add_group">+</button>
+           <div class="large-11 small-11 columns"><h1>Groups</h1></div>
+        </div>
+        <div class="row">
+           <div class="large-2 small-2 columns">
+             <!-- add group --><button class="button do_add_group">+</button>
  	   </div>
+
         </div>
         <div id="groups_container" class="section-container accordion" data-section="accordion">
         </div>
@@ -48,7 +73,7 @@
         <!-- login, title -->
         <div class="row">
            <div class="large-1 small-1 columns home"><!-- home --></div>
-           <div class="large-7 small-11 columns"><h1>Login</h1></div>
+           <div class="large-11 small-11 columns"><h1>Login</h1></div>
         </div>
         <!-- login form - handled in browser -->
         <form action="javascript:false" id="login_form">
@@ -64,12 +89,14 @@
       <!-- <div id="section_group" style="display:none"> -->
         <!-- groups, title -->
         <div class="row">
-           <div class="large-1 small-1 columns home"><!-- home --></div>
-           <div class="large-6 small-10 columns"><h1 id="group_title">X-GROUP-TITLE-X</h1></div>
-           <div class="large-1 small-1 columns">
-             <!-- add item --><button class=".button">+</button>
- 	   </div>
+           <div class="large-1 small-1 columns home"><a href="groups" class="button">&lt;</a></div>
+           <div class="large-11 small-11 columns"><h1 id="group_title">X-GROUP-TITLE-X</h1></div>
         </div>
+        <div class="row">
+           <div class="large-1 small-1 columns">
+             <!-- add item --><button class="button do_add_item">+</button>
+ 	   </div>
+       </div>
         <div id="items_container" class="section-container accordion" data-section="accordion">
           <!-- test section -->
           <section>
@@ -89,7 +116,9 @@
   <!-- footer -->
   <div class="row">
     <hr />
-    <p><a href="http://opensharingtoolkit.org">OpenSharingToolkit</a></p>
+    <div class="large-4 small-6 columns">
+      <a href="http://opensharingtoolkit.org">OpenSharingToolkit</a>
+    </div>
   </div>
 
   <!-- Foundation JS bootstrap -->
@@ -101,6 +130,7 @@
   
   <script src="js/foundation.min.js"></script>
   <script src="js/foundation/foundation.section.js"></script>
+  <script src="js/foundation/foundation.topbar.js"></script>
 
   <!-- backbone and underscore -->
   <script src="js/vendor/underscore-min.js"></script>

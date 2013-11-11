@@ -6,6 +6,7 @@ module.exports = class LoginFormView extends Backbone.View
     @model.bind 'change', @render
 
   render: =>
+    $('input[name="password"]',@el).val('')
     @
 
   login: =>

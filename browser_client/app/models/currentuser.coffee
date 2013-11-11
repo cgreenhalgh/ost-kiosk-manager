@@ -7,3 +7,11 @@ module.exports = class CurrentUser extends Backbone.Model
     authenticating: false
 
   # may need to override sync(method, model, [options])
+
+  logout: ->
+    console.log "logout"
+    @set 'authenticated',false
+    @set 'email',''
+    @set 'password',''
+    @set 'authenticating',false
+

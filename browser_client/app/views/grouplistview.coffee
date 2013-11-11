@@ -7,23 +7,27 @@ module.exports = class GroupListView extends Backbone.View
 
   el: $ '#groups_container'
 
+  counter: 0
+
   initialize: ->
     @collection.bind 'add', @appendItem
-
-    $('.add_group').on 'click',@addItem
-    console.log "grouplist registered for add"
+    
+    $('.do_add_group').on 'click',@addItem
 
   addItem: =>
     console.log "grouplist addItem"
     @counter++
     item = new Group
-    item.set gid: "gp#{@counter}" 
+    gid = "gp#{@counter}"
+    item.set gid: gid
     @collection.add item
     $(@el).foundation('section','reflow')
+
+    window.router.navigate "group/#{gid}",{trigger:true}
 
   appendItem: (item) =>
     item_view = new GroupView model: item
     $(@el).append item_view.render().el
 
-  #events: 'click button' : 'addItem'
+  #events: 'click .do_add_group' : 'addItem'
 

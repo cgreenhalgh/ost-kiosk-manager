@@ -17,10 +17,6 @@ module.exports = class LoginSidebarView extends Backbone.View
 
   logout: => 
     # 'real' logout?
-    @model.set 'authenticated',false
-    @model.set 'email',''
-    @model.set 'password',''
-    @model.set 'authenticating',false
     router.navigate 'login',{trigger:true}
 
   events:

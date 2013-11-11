@@ -13,8 +13,11 @@ module.exports = class GroupView extends Backbone.View
     $(@el).html """
       <p class="title" data-section-title>#{@model.get 'gtitle'}</p>
       <div class="content" data-section-content>
-        <p>Dummy group #{@model.get 'gid'} content</p>
-        <button class="small button delete">delete</button>
+        <p>Group #{@model.get 'gid'}</p>
+        <ul class="button-group">
+          <li><button class="small button do_view">View</button></li>
+          <li><button class="small button do_delete">Delete</button></li>
+        </ul>
       </div>
     """
     @
@@ -24,6 +27,9 @@ module.exports = class GroupView extends Backbone.View
 
   remove: => @model.destroy()
 
+  view: =>
+    window.router.navigate "group/#{@model.get 'gid'}",{trigger:true}
+
   events:
-      #'click .swap': 'swap'
-      'click .delete': 'remove'
+      'click .do_delete': 'remove'
+      'click .do_view': 'view'
