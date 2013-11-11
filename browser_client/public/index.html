@@ -17,20 +17,80 @@
     document.addEventListener("DOMContentLoaded", function(){
       console.log("Running app...");
       var App = require("app");
+      // initialise foundation - for accordion etc
+      $(document).foundation();
       App.init();
     }, false);
   </script>
 </head>
 <body>
 
-	<!-- Foundation Test content -->
-	<div class="row">
-		<div class="large-12 columns">
-			<h2>Testing Foundation Layout</h2>
-			<p>From version 4.3.2.</p>
-			<hr />
-		</div>
-	</div>
+  <!-- overall page structure -->
+  <div class="row">
+    <!-- main view container -->
+    <div class="large-8 small-12 columns main_section" id="section_groups" style="display:none">
+      <!-- groups main view -->
+      <!--<div id="section_groups">-->
+        <!-- groups, title -->
+        <div class="row">
+           <div class="large-1 small-1 columns home"><!-- home --></div>
+           <div class="large-6 small-10 columns"><h1>Groups</h1></div>
+           <div class="large-1 small-1 columns">
+             <!-- add group --><button class="button add_group">+</button>
+ 	   </div>
+        </div>
+        <div id="groups_container" class="section-container accordion" data-section="accordion">
+        </div>
+    </div>
+    <!-- login main view -->
+    <div class="large-8 small-12 columns main_section" id="section_login">
+      <!-- <div id="section_login"> -->
+        <!-- login, title -->
+        <div class="row">
+           <div class="large-1 small-1 columns home"><!-- home --></div>
+           <div class="large-7 small-11 columns"><h1>Login</h1></div>
+        </div>
+        <!-- login form - handled in browser -->
+        <form action="javascript:false" id="login_form">
+          <label>Email</label>
+          <input type="text" name="email">
+          <label>Password</label>
+          <input type="password" name="password">
+          <input type="submit" value="Login" class="button">
+        </form>
+    </div>
+    <!-- group main view -->
+    <div class="large-8 small-12 columns main_section" id="section_group" style="display:none">
+      <!-- <div id="section_group" style="display:none"> -->
+        <!-- groups, title -->
+        <div class="row">
+           <div class="large-1 small-1 columns home"><!-- home --></div>
+           <div class="large-6 small-10 columns"><h1 id="group_title">X-GROUP-TITLE-X</h1></div>
+           <div class="large-1 small-1 columns">
+             <!-- add item --><button class=".button">+</button>
+ 	   </div>
+        </div>
+        <div id="items_container" class="section-container accordion" data-section="accordion">
+          <!-- test section -->
+          <section>
+            <p class="title" data-section-title>Dummy item html</p>
+            <div class="content" data-section-content>
+              <p>Dummy item content</p>
+            </div>
+          </setion>
+        </div>
+      <!--</div>-->
+    </div>
+    <!-- side-bar -->
+    <div class="large-4 small-12 columns">
+      <div id="login_sidebar"></div>
+    </div>
+  </div>
+  <!-- footer -->
+  <div class="row">
+    <hr />
+    <p><a href="http://opensharingtoolkit.org">OpenSharingToolkit</a></p>
+  </div>
 
   <!-- Foundation JS bootstrap -->
   <script>
@@ -40,6 +100,7 @@
   </script>
   
   <script src="js/foundation.min.js"></script>
+  <script src="js/foundation/foundation.section.js"></script>
 
   <!-- backbone and underscore -->
   <script src="js/vendor/underscore-min.js"></script>

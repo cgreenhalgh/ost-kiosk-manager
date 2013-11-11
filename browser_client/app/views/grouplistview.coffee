@@ -2,34 +2,28 @@
 
 Group = require('models/group')
 GroupView = require('views/groupview')
-GroupList = require('models/grouplist')
 
 module.exports = class GroupListView extends Backbone.View
 
-  el: $ 'body'
+  el: $ '#groups_container'
 
   initialize: ->
-    _.bindAll @,'render','addItem','appendItem'
-
-    @collection = new GroupList
     @collection.bind 'add', @appendItem
 
-    @counter = 0
-    @render()
+    $('.add_group').on 'click',@addItem
+    console.log "grouplist registered for add"
 
-  render: ->
-    $(@el).append '<button>Add Group</button>'
-    $(@el).append '<ul></ul>'
-
-  addItem: ->
+  addItem: =>
+    console.log "grouplist addItem"
     @counter++
     item = new Group
     item.set gid: "gp#{@counter}" 
     @collection.add item
+    $(@el).foundation('section','reflow')
 
-  appendItem: (item) ->
+  appendItem: (item) =>
     item_view = new GroupView model: item
-    $('ul').append item_view.render().el
+    $(@el).append item_view.render().el
 
-  events: 'click button' : 'addItem'
+  #events: 'click button' : 'addItem'
 

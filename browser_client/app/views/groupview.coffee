@@ -1,25 +1,28 @@
-# view of group - test for now
+# view of group in group list
 
 module.exports = class GroupView extends Backbone.View
 
-  tagName: 'li'
+  tagName: 'div'
+  className: 'section'
 
   initialize: ->
-    _.bindAll @,'render','unrender','remove'
     @model.bind 'change', @render
     @model.bind 'remove', @unrender
 
-  render: ->
+  render: =>
     $(@el).html """
-      <span>#{@model.get 'gid'} #{@model.get 'gtitle'}!</span>
-      <span class="delete">delete</span>
+      <p class="title" data-section-title>#{@model.get 'gtitle'}</p>
+      <div class="content" data-section-content>
+        <p>Dummy group #{@model.get 'gid'} content</p>
+        <button class="small button delete">delete</button>
+      </div>
     """
     @
 
   unrender: =>
     $(@el).remove()
 
-  remove: -> @model.destroy()
+  remove: => @model.destroy()
 
   events:
       #'click .swap': 'swap'

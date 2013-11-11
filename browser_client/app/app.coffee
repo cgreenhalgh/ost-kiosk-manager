@@ -1,4 +1,22 @@
-GroupListView = require("views/grouplistview")
+GroupListView = require "views/grouplistview"
+GroupList = require "models/grouplist"
+CurrentUser = require "models/currentuser"
+LoginSidebarView = require "views/loginsidebarview"
+LoginFormView = require "views/loginformview"
+
+class Router extends Backbone.Router
+  routes: 
+    "login": "login"
+    "groups": "groups"
+
+  login: -> 
+    $('.main_section').hide()
+    $('#section_login').show()
+
+  groups: -> 
+    $('.main_section').hide()
+    $('#section_groups').show()
+
 
 App =
   init: ->
@@ -8,7 +26,25 @@ App =
     Backbone.sync = (method, model, success, error) ->
       success()
 
+    # in-app virtual pages
+    router = new Router
+    Backbone.history.start()
+    window.router = router
+
+    router.navigate("login", {trigger:true})
+
+    window.currentuser = currentuser = new CurrentUser
+    
+    lsv = new LoginSidebarView {
+      el: $('#login_sidebar')
+      model: currentuser
+    }
+    lsv.render()
+
+    new LoginFormView { el: $('#login_form'), model: currentuser }
+
     #list_view = new ListView
-    group_list_view = new GroupListView
+    grouplist = new GroupList
+    new GroupListView collection: grouplist
 
 module.exports = App
