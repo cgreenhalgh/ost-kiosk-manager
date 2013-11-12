@@ -97,6 +97,57 @@ make_shorturls = (feed,shorturls) ->
           if appurls?.length > 0
             add_shorturl shorturls,url+'&a='+encodeURIComponent(appurls[0])
 
+# cache entry for each
+make_cache = (feed,cache) ->
+
+  fileurls = []
+  for entry in feed.entry 
+    hidden = is_hidden entry
+    for link in entry.link when link.$.href? and (link.$.rel == 'alternate' or not is_hidden)
+      url = link.$.href
+      # not sure why indexOf doesn't seem to match it
+      us = for u in fileurls when u == url
+        u
+      if us.length == 0
+        #console.log 'add '+url+' to '+fileurls
+        fileurls.push url 
+  #console.dir fileurls
+ 
+  oldfiles = cache.files ? []
+  cache.files = []
+
+  for file in oldfiles
+    file.needed = false
+    # does the file exist?
+    if file.path?
+      fileok = false
+      try 
+        st = fs.statSync file.path
+        if st.isFile() 
+          fileok = true
+        else
+          console.log 'old cache path not file: '+file.path
+      catch e
+        console.log 'old cache file not found: '+file.path
+      if not fileok
+        # doesn't exist, presumably
+        delete file.path
+        delete file.size
+        delete file.mtime
+
+  for fileurl in fileurls
+    file = { url: fileurl }  
+    oldfile = for file in oldfiles when file.url == fileurl
+      file
+    if oldfile.length > 0
+      file = oldfile[0]
+    
+    file.needed = true
+    cache.files.push file
+
+  # un-needed files in cache?
+  for oldfile in oldfiles when oldfile.path? and not oldfile.needed 
+    cache.files.push oldfile
 
 # parse file(s) and call worker(s)
 parser.parseString data,(err,result) ->
@@ -157,12 +208,21 @@ parser.parseString data,(err,result) ->
   baseurl = get_baseurl feed
   cache.baseurl = baseurl
 
-  icons = for entry in feed.entry 
-    for link in entry.link when link.$.rel == 'alternate'
-      link.$
-  icons = [].concat icons...
-  #console.dir icons
+  make_cache feed,cache
+
   # TODO
+  # if the local file exists and we have size and server last-modified,
+  #   try a head on the remote file with if-modified-since;
+  #   (prepare to) dump local copy if out of date
+  #
+  # new local path = url mapped to folder hierarchy - domain name
+  #   in reverse order (ip forwards), port, path elements, 
+  #   final filename+fragment+query
+  #
+  # if updated or missing attempt download, initially to temp file
+  #   and stash header last-modified and content-length  
+  # 
+  # on success remove old file if present and link/rename new file
 
   console.log 'write cache.js'
   fs.writeFileSync cachefn,JSON.stringify cache

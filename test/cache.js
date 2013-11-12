@@ -1,1 +1,1 @@
-{"baseurl":"http://www.cs.nott.ac.uk/~cmg/AppropriateICT/test/"}
+{"baseurl":"http://www.cs.nott.ac.uk/~cmg/AppropriateICT/test/","files":[{"url":"http://www.cs.nott.ac.uk/~cmg/AppropriateICT/test/thing1.png","needed":true},{"url":"http://www.cs.nott.ac.uk/~cmg/AppropriateICT/test/adobe_reader.png","needed":true}]}
