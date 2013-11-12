@@ -21,18 +21,22 @@ A content group (=> feed) has
 
 - an internal name (ID)
 - a title
-- a version / subtitle
+- an author version / subtitle
 - a last modified date/time
+- a (general) visibility, e.g. hidden or public
 - some content items...
 
 `/user/group:EMAIL,GROUPNAME`
 
 A content item (=> entry) has
 
+- a local (opaque) ID
+- a global (atom) ID
 - a file url 
 - a title
 - a summary
 - an icon URL
+- an author version / subtitle
 - a file mime type
 - a browser visibility, e.g. hidden or not
 - a (possibly empty) list of required device (types)
@@ -45,6 +49,7 @@ A content item (=> entry) has
 
 A website deployment has
 
+- a global (atom) id (feed id)
 - a base url
 - a set of groups (IDs)
 - a set of short url mappings

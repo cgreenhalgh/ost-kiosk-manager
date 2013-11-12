@@ -38,7 +38,10 @@ module C = Cohttp
 (* dbforms typeinfo *)
 let dbtypeinfos = Dbcommon.([ 
   { tname="user"; ttype=Model.type_of_user; tparent=None; pkname="email"; pktype=`User_defined };
-  { tname="group"; ttype=Model.type_of_group; tparent=Some "user"; pkname="gid"; pktype=`User_defined }
+  { tname="group"; ttype=Model.type_of_group; tparent=Some "user"; pkname="gid"; pktype=`User_defined };
+  { tname="item"; ttype=Model.type_of_item; tparent=Some "group"; pkname="iid"; pktype=`User_defined };
+  { tname="website"; ttype=Model.type_of_website; tparent=Some "user"; pkname="wid"; pktype=`User_defined };
+  { tname="device"; ttype=Model.type_of_device; tparent=Some "user"; pkname="did"; pktype=`User_defined }
 ])
 
 let _ = (* allow login against local accounts *)
@@ -78,6 +81,8 @@ module Resp = struct
             (* NB prefix user - this is all the security for now *)
             Dbrest.dispatch ?body req ("user" :: user :: path_elem) dbtypeinfos user
         end
+      | "atom" :: email :: wid :: [] ->
+        Atomgen.dispatch email wid
       | x -> OS.Console.log("Not found: "^(List.fold_left (fun ss s -> ss^"/"^s) "" x));
         CL.Server.respond_not_found ~uri:(CL.Request.uri req) ()
 end

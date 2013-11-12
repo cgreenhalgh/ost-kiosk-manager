@@ -51,11 +51,49 @@ let authenticator = function (username, password) ->
     end
   | B.NOK _ -> Lwt.return false
 
+(* group, child of user *)
 type group = {
   gid : string;
   mutable gtitle : string;
   mutable gver: string;
   mutable gdate: string;
-  gtestimmutable: string
+  mutable gpublic: bool
+} with type_of, json
+
+(* item, child of group *)
+type item = {
+  iid: string; 
+  mutable iatomid: string;
+  mutable ititle: string;
+  mutable isummary: string;
+  mutable iiconurl: string;
+  mutable irequires: string;
+  (* whitespace separated list *)
+  mutable ifileurl: string;
+  mutable ifilemime: string;
+  mutable isupports: string;
+  (* whitespace separated list *)
+  mutable ivisible: bool;
+  mutable ipublic: bool;
+  mutable iver: string;
+  mutable idate: string
+} with type_of, json
+
+(* webdeploy, child of user *)
+type website = {
+  wid: string;
+  mutable watomid: string;
+  mutable wtitle: string;
+  mutable wgeturl: string;
+  mutable wgids: string
+  (* group(s), whitespace separated list *)
+} with type_of, json
+
+(* device, child of user *)
+type device = {
+  did: string;
+  mutable dtitle: string;
+  mutable dgids: string
+  (* whitespace separated list *)
 } with type_of, json
 

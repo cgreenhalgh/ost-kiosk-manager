@@ -35,7 +35,10 @@ let header_content_type = "Content-Type"
 let content_type_html = "text/html"
 let content_type_javascript = "application/javascript"
 let content_type_css = "text/css"
-(*["content-type","application/atom+xml; charset=UTF-8"]*)
+let content_type_atom = "application/atom+xml"
+let content_type_png = "image/png"
+let content_type_gif = "text/gif"
+let content_type_jpeg = "text/jpeg"
 
 (* file extensions... *)
 let ext_regexp = Re_str.regexp "\\.\\([^./]+\\)$"
@@ -52,6 +55,10 @@ let file_ext_map =
   let map = StringMap.empty =>
   StringMap.add "html" content_type_html =>
   StringMap.add "css" content_type_css =>
+  StringMap.add "png" content_type_png =>
+  StringMap.add "gif" content_type_gif =>
+  StringMap.add "jpg" content_type_jpeg =>
+  StringMap.add "jpeg" content_type_jpeg =>
   StringMap.add "js" content_type_javascript in
   map
 

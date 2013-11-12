@@ -134,6 +134,7 @@ let return_list req path_elems typeinfos =
         let col value (vpn,pval) = if tpn=vpn then
             match pval with
             | Json.String s -> html_of_string s 
+            | Json.Bool b -> html_of_string (if b then "true" else "false") 
             | _ -> html_of_string "Unsupported"
           else value in
         let v = match jval with 
@@ -182,9 +183,11 @@ let return_addform req path_elems typeinfos =
     let row (pn,_,pdyntype) = begin
       let typename = match pdyntype with 
       | Dyntype.Type.String -> html_of_string "string"
+      | Dyntype.Type.Bool -> html_of_string "bool"
       | _ -> html_of_string ("Unsupported: "^(Dyntype.Type.to_string pdyntype)) in
       let input = match pdyntype with
       | Dyntype.Type.String -> begin <:html<<input type="text" name="$str:pn$"></input>&>> end
+      | Dyntype.Type.Bool -> begin <:html<<select name="$str:pn$"><option selected="selected" value="false">false</option><option value="true">true</option></select>&>> end
       | _ -> html_of_string "Unsupported" in
       tr [td (html_of_string pn); 
           td typename;
@@ -212,6 +215,13 @@ let encode_id id =
   done;
   Buffer.contents b
 
+let get_form_bool sval =
+  let c = if String.length sval >= 1 then
+      String.get sval 0 
+    else 
+      'f' in
+  c='t' || c='T' || c='1' || c='y' || c='Y'
+
 let return_add ?body req path_elems typeinfos =
     let ti = get_typeinfo typeinfos path_elems in
     lwt body = Cohttp_lwt_body.string_of_body body in 
@@ -224,6 +234,7 @@ let return_add ?body req path_elems typeinfos =
         let sval = Login.get_one_value formvalues pn in
         match pdyntype with 
         | Dyntype.Type.String -> (pn,Json.String sval)
+        | Dyntype.Type.Bool -> (pn,Json.Bool (get_form_bool sval))
         | _ -> raise(Unimplemented ("property dyntype: "^(Dyntype.Type.to_string pdyntype)))
       end in
       let propvals = match ti.ttype with 
@@ -303,6 +314,7 @@ let return_view req path_elems typeinfos =
     let row (pn,pval) = begin
       let value = match pval with
       | Json.String s -> html_of_string s 
+      | Json.Bool b -> html_of_string (if b then "true" else "false") 
       | _ -> html_of_string "Unsupported" in
       tr [td (html_of_string pn); 
           td value] end in
@@ -349,6 +361,12 @@ let return_editform req path_elems typeinfos =
     let row (pn,pval) = begin
       let input = match pval with
       | Json.String s -> <:html<<input type="text" name="$str:pn$" value="$str:s$"></input>&>> 
+      | Json.Bool b -> begin 
+          let tsel = if b then <:html<<option value="true" selected="selected">true</option>&>>
+                else <:html<<option value="true">true</option>&>> and
+              fsel = if b then <:html<<option value="false" selected="selected">false</option>&>>
+                else <:html<<option value="false">false</option>&>> in
+          <:html<<select name="$str:pn$">$fsel$ $tsel$</select>&>> end
       | _ -> html_of_string "Unsupported" in
       tr [td (html_of_string pn); 
           td input] end in
@@ -375,6 +393,7 @@ let return_edit ?body req path_elems typeinfos =
         let sval = Login.get_one_value formvalues pn in
         match pdyntype with 
         | Dyntype.Type.String -> (pn,Json.String sval)
+        | Dyntype.Type.Bool -> (pn,Json.Bool (get_form_bool sval))
         | _ -> raise(Unimplemented ("property dyntype: "^(Dyntype.Type.to_string pdyntype)))
       end in
       let propvals = match ti.ttype with 

@@ -62,6 +62,14 @@ let rec get_typeinfo typeinfos path_elems = match path_elems with
  | rn :: _ :: rest -> get_typeinfo typeinfos rest
  | _ -> raise (HttpError (`Bad_request,"odd path length"))
 
+let check_key_part pk = 
+  (* path element should be encoded already *)
+  for i=0 to (String.length pk)-1 do
+    let c = String.get pk i in 
+    if c=',' || c='/' || c=':' || c='%' then begin
+      raise (HttpError (`Bad_request,("invlalid path id element "^pk)))
+    end
+  done
 
 let get_key path_elems =
   let keybuf = Buffer.create 100 in
@@ -75,13 +83,7 @@ let get_key path_elems =
       Buffer.add_string keybuf "/";
       Buffer.add_string keybuf ptn;
       if Buffer.length keyidbuf > 0 then Buffer.add_string keyidbuf ",";
-        (* path element should be encoded already *)
-        for i=0 to (String.length pk)-1 do
-          let c = String.get pk i in 
-          if c=',' || c='/' || c=':' || c='%' then begin
-            raise (HttpError (`Bad_request,("invlalid path id element "^pk)))
-          end
-        done;
+      check_key_part pk;
       Buffer.add_string keyidbuf pk;
       begin match rest with 
       | [] -> ()
