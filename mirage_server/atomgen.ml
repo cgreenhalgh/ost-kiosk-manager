@@ -155,12 +155,12 @@ try_lwt
     List.fold_left ifn gupd items in
   (* feed metadata *)
   let author = <:xml< <author><name>$str:email$</name><email>$str:email$</email></author> >> in
-  (* TODO fix feed url 
-  let feedurl = website.wgeturl in
-    <link rel="self" type="application/atom+xml" href="$str:feedurl$"></link> *)
+  (* feed url *) 
+  let feedurl = website.watomurl in
   let meta = <:xml< 
     $author$
     <id>$str:watomid$</id>
+    <link rel="self" type="application/atom+xml" href="$str:feedurl$"></link>
     <title>$str:Model.(website.wtitle)$</title> 
     <updated>$str:updated$</updated> 
    >> in

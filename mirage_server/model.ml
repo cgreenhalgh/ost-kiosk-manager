@@ -84,7 +84,7 @@ type website = {
   wid: string;
   mutable watomid: string;
   mutable wtitle: string;
-  mutable wgeturl: string;
+  mutable watomurl: string;
   mutable wgids: string
   (* group(s), whitespace separated list *)
 } with type_of, json
