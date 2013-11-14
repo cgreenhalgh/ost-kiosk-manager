@@ -96,6 +96,8 @@ make_shorturls = (feed,shorturls) ->
       url = geturl+'?u='+encodeURIComponent(fileurl)+'&t='+encodeURIComponent(title) 
 
       add_shorturl shorturls,url
+      # no helper
+      add_shorturl shorturls,url+'&a='
 
       # each helper app
       for appentry in feed.entry 
@@ -106,6 +108,7 @@ make_shorturls = (feed,shorturls) ->
             link.$.href
           if appurls?.length > 0
             add_shorturl shorturls,url+'&a='+encodeURIComponent(appurls[0])
+            
 
 # cache entry for each
 make_cache = (feed,cache) ->
