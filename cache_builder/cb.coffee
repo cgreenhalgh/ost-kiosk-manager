@@ -26,18 +26,18 @@ console.log 'read '+atomfn
 data = fs.readFileSync atomfn, 'utf8'
 console.log 'read '+data.length+' bytes'
 
-# try reading shorturls.js
+# try reading shorturls.json
 shorturls = []
-shorturlsfn = 'shorturls.js'
+shorturlsfn = 'shorturls.json'
 try 
   shorturlsdata = fs.readFileSync shorturlsfn,'utf8'
   shorturls = JSON.parse shorturlsdata
 catch e
   console.log 'could not read '+shorturlsfn+': '+e
 
-# try reading cache.js
+# try reading cache.json
 cache = {}
-cachefn = 'cache.js'
+cachefn = 'cache.json'
 try 
   cachedata = fs.readFileSync cachefn,'utf8'
   cache = JSON.parse cachedata
@@ -54,13 +54,16 @@ add_shorturl = (shorturls,url) ->
     # work out shorturl later
     shorturls.push { url: url } 
 
-get_baseurl = (feed) ->
-  baseurl = for link in feed.link when link.$.rel == 'self'
+get_feedurl = (feed) ->
+  feedurl = for link in feed.link when link.$.rel == 'self'
     link.$.href
-  if baseurl.length < 1
+  if feedurl.length < 1
     console.log 'No self link found - cannot work out shorturls'
     process.exit -1
-  baseurl = baseurl[0]
+  return feedurl[0]
+
+get_baseurl = (feed) ->
+  baseurl = get_feedurl feed
   ix = baseurl.lastIndexOf '/'
   baseurl = baseurl.slice 0,ix+1
   console.log 'Base URL = '+baseurl
@@ -69,11 +72,16 @@ get_baseurl = (feed) ->
 # shorturl for each 
 make_shorturls = (feed,shorturls) ->
   console.log 'make_shorturls...'
-  # TODO
 
   # atom url -> get url
   baseurl = get_baseurl feed
   geturl = baseurl+'get.html'
+
+  # request a short-url for internet kiosk view
+  feedurl =get_feedurl feed
+  kioskurl = baseurl+'kiosk.html?f='+encodeURIComponent(feedurl)
+  url = geturl+'?u='+encodeURIComponent(kioskurl)+'&t='+encodeURIComponent("Kiosk View") 
+  add_shorturl shorturls,url
 
   # work out URLs to be shortened
   # get.html?u=URL&t=TITLE&a=HELPERURL...
@@ -151,6 +159,13 @@ make_cache = (feed,cache) ->
   for oldfile in oldfiles when oldfile.path? and not oldfile.needed 
     cache.files.push oldfile
 
+get_filename_for_component = (h) ->
+  if h=='' 
+    return '_'
+  h = encodeURIComponent h
+  return h.replace("~","_")
+  # is that enough??
+
 # get local cache path for an URL - like java cacheing,
 # maps domain name elements and path elements to folders
 get_cache_path = (url) ->
@@ -175,7 +190,7 @@ get_cache_path = (url) ->
   hs = ["cache"].concat hs,ps
   # make safe filenames
   hs = for h in hs
-    if h=='' then '_' else encodeURIComponent h # is that enough??
+    get_filename_for_component h
   path = hs.join '/'
   return path
 
@@ -193,7 +208,7 @@ parser.parseString data,(err,result) ->
   fix_shorturls = (shorturls,i) ->
     if i >= shorturls.length
       # done
-      console.log 'write shorturls.js'
+      console.log 'write shorturls.json'
       fs.writeFileSync shorturlsfn,JSON.stringify shorturls
     else
       su = shorturls[i]
@@ -251,7 +266,7 @@ parser.parseString data,(err,result) ->
   fix_cache = (cache,ix) ->
     if ix >= cache.files.length
       # done!
-      console.log 'write cache.js'
+      console.log 'write cache.json'
       fs.writeFileSync cachefn,JSON.stringify cache
     else
       file = cache.files[ix]
