@@ -110,22 +110,31 @@ make_shorturls = (feed,shorturls) ->
             add_shorturl shorturls,url+'&a='+encodeURIComponent(appurls[0])
             
 
+add_fileurl = (url, fileurls) ->
+    #console.log "check #{url}"
+    # not sure why indexOf doesn't seem to match it
+    us = for u in fileurls when u == url
+      u
+    if not us? or us.length == 0
+      #console.log 'add '+url+' to fileurls'
+      fileurls.push url 
+
 # cache entry for each
 make_cache = (feed,cache) ->
 
   fileurls = []
   for entry in feed.entry 
+    #console.dir entry
     hidden = is_hidden entry
+    # atom enclosures
     for link in entry.link when link.$.href? and (link.$.rel == 'alternate' or not hidden)
-      url = link.$.href
-      # not sure why indexOf doesn't seem to match it
-      us = for u in fileurls when u == url
-        u
-      if us.length == 0
-        #console.log 'add '+url+' to '+fileurls
-        fileurls.push url 
-  #console.dir fileurls
+      add_fileurl link.$.href, fileurls
+    # media-rss media:thumbnail
+    for thumbnail in (entry['media:thumbnail'] ? []) when thumbnail.$.url?
+      add_fileurl thumbnail.$.url, fileurls
+  console.dir fileurls
  
+
   oldfiles = cache.files ? []
   cache.files = []
 
