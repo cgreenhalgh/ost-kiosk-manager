@@ -69,22 +69,30 @@ get_baseurl = (feed) ->
   console.log 'Base URL = '+baseurl
   return baseurl
 
+# your google shortener API key?!
+API_KEY = 'AIzaSyAZ2wia3BqnEkJEBQ7WYiDw3_VMi0bCC8s'
+
 # shorturl for each 
 make_shorturls = (feed,shorturls) ->
   console.log 'make_shorturls...'
 
   # atom url -> get url
   baseurl = get_baseurl feed
-  geturl = baseurl+'get.html'
+  # .html?? .php for now!
+  geturl = baseurl+'get.php'
 
   # request a short-url for internet kiosk view
   feedurl =get_feedurl feed
-  kioskurl = baseurl+'kiosk.html?f='+encodeURIComponent(feedurl)
-  url = geturl+'?u='+encodeURIComponent(kioskurl)+'&t='+encodeURIComponent("Kiosk View") 
-  add_shorturl shorturls,url
+  kioskurl = baseurl+'index.html?f='+encodeURIComponent(feedurl)
+  url = geturl+'?u='+encodeURIComponent(kioskurl)+'&t='+encodeURIComponent("Kiosk View")  
+  mimeparam = '&m='+encodeURIComponent('text/html')
+  add_shorturl shorturls,url+mimeparam
+  for device in ['other', 'android', 'ios', 'windowsphone']
+    add_shorturl shorturls,url+'&d='+encodeURIComponent(device)+mimeparam+(if device=='other' then '&a=' else '')
+
 
   # work out URLs to be shortened
-  # get.html?u=URL&t=TITLE&a=HELPERURL...
+  # get.html?u=URL&t=TITLE[&d=DEVICETYPE][&m=MIMETYPE]&a=HELPERURL...
   # each entry...
   for entry in feed.entry when not is_hidden entry
     title = entry.title[0]
@@ -95,19 +103,30 @@ make_shorturls = (feed,shorturls) ->
 
       url = geturl+'?u='+encodeURIComponent(fileurl)+'&t='+encodeURIComponent(title) 
 
-      add_shorturl shorturls,url
+      mimeparam = if mime? then '&m='+encodeURIComponent(mime) else ''
+      add_shorturl shorturls,url+mimeparam
       # no helper
-      add_shorturl shorturls,url+'&a='
+      add_shorturl shorturls,url+mimeparam+'&a='
 
-      # each helper app
-      for appentry in feed.entry 
-        supports = for cat in appentry.category ? [] when cat.$.scheme == 'supports-mime-type' and cat.$.term == mime
-          cat.$.label ? cat.$.term 
-        if supports?.length > 0
-          appurls = for link in appentry.link ? [] when link.$.rel == 'enclosure'
-            link.$.href
-          if appurls?.length > 0
-            add_shorturl shorturls,url+'&a='+encodeURIComponent(appurls[0])
+      for device in ['other', 'android', 'ios', 'windowsphone']
+        devurl = url+'&d='+encodeURIComponent(device)
+
+        add_shorturl shorturls,devurl+mimeparam
+        # no helper
+        add_shorturl shorturls,devurl+mimeparam+'&a='
+
+        # each helper app
+        for appentry in feed.entry 
+          requires = for cat in appentry.category ? [] when cat.$.scheme == 'requires-device' and cat.$.term == device
+            cat.$.label
+          if requires?.length > 0
+            supports = for cat in appentry.category ? [] when cat.$.scheme == 'supports-mime-type' and cat.$.term == mime
+              cat.$.label ? cat.$.term 
+            if supports?.length > 0
+              appurls = for link in appentry.link ? [] when link.$.rel == 'enclosure'
+                link.$.href
+              if appurls?.length > 0
+                add_shorturl shorturls,devurl+'&a='+encodeURIComponent(appurls[0])
             
 
 add_fileurl = (url, fileurls) ->
@@ -233,9 +252,13 @@ parser.parseString data,(err,result) ->
         console.log 'Shorten '+su.url
         req = {longUrl: su.url}
         reqs = JSON.stringify req
+        url = '/urlshortener/v1/url'
+        if API_KEY?
+          url = url+"?key="+API_KEY
+
         options =
           hostname: 'www.googleapis.com'
-          path: '/urlshortener/v1/url'
+          path: url
           method: 'POST'
           headers: { 'content-type': 'application/json' }
 
