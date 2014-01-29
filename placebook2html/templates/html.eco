@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html manifest="<%= @manifestfn %>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title><%= @title %></title>
+</head>
+<body>
+  <h1><%= @title %></h1>
+<% for col,cix in @columns: %>
+  <% if cix>0: %><hr><% end %>
+  <% for item in col: %>
+    <div>
+    <% if item.parameters.marker? and item.parameters.markerShow==1: %>
+      <img src="../icons/marker<%= String.fromCharCode(item.parameters.marker) %>.png" width="24px" height="auto" style="float:left">
+    <% end %>
+    <%- if item.type=='TextItem' and item.text? then item.text else '' %>
+      <div style="clear:both"></div>
+    <% if item.type=='ImageItem': %>
+      <img src="<%= item.hash %>" width="100%" height="auto">
+    <% end %>
+    <% if item.type=='MapImageItem': %>
+     <div style="overflow:scroll;max-width=600px;max-height=600px">
+      <div style="position:relative">
+        <img src="<%= item.hash %>" width="100%" height="auto">
+        <div id="mapicon<%= item.id %>" style="display:none;position:absolute;z-index:1">
+          <img src="../icons/person.png" width="48px" height="auto" style="position:relative;left:-24px">
+        </div>
+<script >
+(function () {
+  var x=document.getElementById("mapicon<%= item.id %>");
+  function update(pos) {
+    x.style.display = 'block';
+    console.log("Update "+pos.coords.latitude+","+pos.coords.longitude);
+    x.style.bottom = ""+(100*(<%= item.map.lat1 %>-pos.coords.latitude)/<%= item.map.lat1-item.map.lat0 %>)+"%"
+    x.style.left = ""+(100*(pos.coords.longitude-(<%= item.map.lon0 %>))/<%= item.map.lon1-item.map.lon0 %>)+"%"
+  }
+  if (navigator.geolocation) {
+    console.log("watch position");
+    navigator.geolocation.getCurrentPosition(update);
+    navigator.geolocation.watchPosition(update);
+    // test
+    //update({coords:{latitude:<%= (item.map.lat1+item.map.lat0)/2 %>,longitude:<%= (item.map.lon1+item.map.lon0)/2 %>}});
+  }
+})();
+</script>
+      <% for markitem in item.map.items: %>
+        <div style="position:absolute;bottom:<%= (1-markitem.top)*100 %>%;left:<%= markitem.left*100 %>%">
+          <img src="../icons/marker<%= String.fromCharCode(markitem.parameters.marker) %>.png" width="24px" height="auto" style="position:relative;left:-12px">
+        </div>
+      <% end %> 
+      </div>
+     </div>
+    <% end %>
+    </div>
+  <% end %>
+<% end %>
+</body>
+</html>

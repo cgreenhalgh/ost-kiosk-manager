@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html manifest="placebook.manifest">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Jubilee Tour</title>
+</head>
+<body>
+  <h1>Jubilee Tour</h1>
+
+  
+  
+    <div>
+    
+    <div style="font-size: 25px; font-weight:bold;">Jubilee Tour</div>
+      <div style="clear:both"></div>
+    
+    
+    </div>
+  
+    <div>
+    
+    The Jubilee Campus of the University of Nottingham is about 10 minutes walk from the main campus, and houses the Schools of Computer Science, Business, Education and a number of research institutes. &nbsp;It is built on the site of the former Raleigh cycle factory. &nbsp;It was opened in 2000, and has been extended significantly since then.&nbsp;
+      <div style="clear:both"></div>
+    
+    
+    </div>
+  
+    <div>
+    
+    
+      <div style="clear:both"></div>
+    
+    
+     <div style="overflow:scroll;max-width=600px;max-height=600px">
+      <div style="position:relative">
+        <img src="1882f48b28e2ee453781daeaf45bd061" width="100%" height="auto">
+        <div id="mapicon2246" style="display:none;position:absolute;z-index:1">
+          <img src="../icons/person.png" width="48px" height="auto" style="position:relative;left:-24px">
+        </div>
+<script >
+(function () {
+  var x=document.getElementById("mapicon2246");
+  function update(pos) {
+    x.style.display = 'block';
+    console.log("Update "+pos.coords.latitude+","+pos.coords.longitude);
+    x.style.bottom = ""+(100*(52.95525697845466-pos.coords.latitude)/0.004964225210876805)+"%"
+    x.style.left = ""+(100*(pos.coords.longitude-(-1.18927001953125))/0.0054931640625)+"%"
+  }
+  if (navigator.geolocation) {
+    console.log("watch position");
+    navigator.geolocation.getCurrentPosition(update);
+    navigator.geolocation.watchPosition(update);
+    // test
+    //update({coords:{latitude:52.95277486584922,longitude:-1.1865234375}});
+  }
+})();
+</script>
+      
+        <div style="position:absolute;bottom:67.72699770996319%;left:14.954427083777974%">
+          <img src="../icons/marker1.png" width="24px" height="auto" style="position:relative;left:-12px">
+        </div>
+      
+        <div style="position:absolute;bottom:24.758062357923716%;left:83.70442708378202%">
+          <img src="../icons/marker2.png" width="24px" height="auto" style="position:relative;left:-12px">
+        </div>
+       
+      </div>
+     </div>
+    
+    </div>
+  
+
+  <hr>
+  
+    <div>
+    
+      <img src="../icons/marker1.png" width="24px" height="auto" style="float:left">
+    
+    <div style="font-size: 25px; font-weight:bold;">Sir Harry and Lady Djanogly Learning Resource Centre</div>
+      <div style="clear:both"></div>
+    
+    
+    </div>
+  
+    <div>
+    
+    <div>The library is an unusual circular building situated on an island platform in the middle of the campus lake. It was designed by the architect Sir Michael Hopkins, with the striking feature of having only a single floor, which spirals its way up and around the circumference of the building.</div>
+      <div style="clear:both"></div>
+    
+    
+    </div>
+  
+    <div>
+    
+    
+      <div style="clear:both"></div>
+    
+      <img src="cfe670fef04729e277632faca2272195" width="100%" height="auto">
+    
+    
+    </div>
+  
+
+  <hr>
+  
+    <div>
+    
+      <img src="../icons/marker2.png" width="24px" height="auto" style="float:left">
+    
+    <div style="font-size: 25px; font-weight:bold;">Aspire</div>
+      <div style="clear:both"></div>
+    
+    
+    </div>
+  
+    <div>
+    
+    <div>Aspire is a work of art, constructed on the Jubilee Campus of the University of Nottingham, in Nottingham, England. It is a 60-metre tall, red and orange steel sculpture, and was, until overtaken by Anish Kapoor's Orbit, the tallest free standing public work of art in the United Kingdom. Designed by Ken Shuttleworth and MAKE Architects, it comprises an 8m high concrete foundation and 52m high red and orange steel tower. The sculpture weighs 854 tonnes, and cost ?800,000, which was donated by an anonymous benefactor.</div>
+      <div style="clear:both"></div>
+    
+    
+    </div>
+  
+    <div>
+    
+    
+      <div style="clear:both"></div>
+    
+      <img src="63e83f6797ccf653bd23f19a117d9a5f" width="100%" height="auto">
+    
+    
+    </div>
+  
+
+</body>
+</html>
