@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html manifest="<%= @manifestfn %>">
+<html manifest="send.php?f=<%= encodeURIComponent(@manifestfn) %>&m=text/cache-manifest">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
@@ -29,6 +29,9 @@
 <script >
 (function () {
   var x=document.getElementById("mapicon<%= item.id %>");
+  function error(err) {
+    console.log("Position error "+err.code+": "+err.message);
+  }
   function update(pos) {
     x.style.display = 'block';
     console.log("Update "+pos.coords.latitude+","+pos.coords.longitude);
@@ -37,8 +40,9 @@
   }
   if (navigator.geolocation) {
     console.log("watch position");
-    navigator.geolocation.getCurrentPosition(update);
-    navigator.geolocation.watchPosition(update);
+    var opts = { enableHighAccuracy : true, maximumAge : 10000 };
+    navigator.geolocation.getCurrentPosition(update, error, opts);
+    navigator.geolocation.watchPosition(update, error, opts);
     // test
     //update({coords:{latitude:<%= (item.map.lat1+item.map.lat0)/2 %>,longitude:<%= (item.map.lon1+item.map.lon0)/2 %>}});
   }

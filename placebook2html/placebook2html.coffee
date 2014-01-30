@@ -36,8 +36,10 @@ console.log "Processing placebook #{id}: #{metadata.title}"
 # reorganise/sort pages/columns and page content
 # find maps indexed by page...
 maps = {}
-columns = [] 
+columns = []
+cachefiles = []
 
+needPerson = false
 for page,pix in pages
   for item in page.items when item.type=='MapImageItem'
     # e.g. "geom":"POLYGON ((52.95029275324379 -1.18927001953125, 52.95525697845466 -1.18927001953125, 52.95525697845466 -1.18377685546875, 52.95029275324379 -1.18377685546875, 52.95029275324379 -1.18927001953125))"
@@ -68,11 +70,22 @@ for page,pix in pages
       lon1: lon1
     maps[pix] = map
     item.map = map
+    needPerson = true
     console.log "Found map #{item.id} on page #{pix} lat #{lat0}:#{lat1} lon #{lon0}:#{lon1}"
+if needPerson
+  cachefiles.push '../icons/person.png'
+
+needMarker = false
 for page,pix in pages
   #console.log "found page #{page.id}"
   for item in page.items
     #console.log "found item #{item.id} #{item.type}"
+    if item.hash?
+      cachefiles.push item.hash
+    if item.parameters.marker?
+      cachefiles.push ('../icons/marker'+String.fromCharCode(item.parameters.marker)+'.png')
+    else if item.parameters.mapPage?
+      needMarker = true
     cix = pix*2+item.parameters.column
     if not columns[cix]
       columns[cix] = []
@@ -96,8 +109,10 @@ for page,pix in pages
           item.top = (map.lat1-lat)/(map.lat1-map.lat0)
           item.left = (lon-map.lon0)/(map.lon1-map.lon0)
 
+if needMarker
+  cachefiles.push '../icons/marker.png'
 # TODO
-manifestfn = 'placebook.manifest'
+manifestfn = 'placebook.appcache'
 
 data = 
   title: metadata.title
@@ -117,7 +132,10 @@ fs.writeFileSync outfn, html
 
 console.log "Writing #{manifestfn}"
 manifest = 'CACHE MANIFEST\n'+
+  '# '+(new Date())+'\n'+
   outfn+'\n'
+for f in cachefiles
+  manifest += f+'\n'
 
 fs.writeFileSync manifestfn, manifest
 
