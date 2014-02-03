@@ -9,8 +9,50 @@ if process.argv.length<3
   console.log 'usage: coffee cb.coffee <KIOSK-ATOM-FILE>'
   process.exit -1
 
-atomfn = process.argv[2]
+# devices cofig
+devicesfn = "devices.json"
+console.log "read devices from #{devicesfn}"
+devicesin = fs.readFileSync devicesfn,'utf8'
+try 
+  devices = JSON.parse devicesin
+catch err
+  console.log "Error parsing JSON from #{devicesfn}: #{err.message}"
+  process.exit -1
 
+# mimetypes defaults
+mimetypesinfn = "mimetypes-in.json"
+mimetypesfn = "mimetypes.json"
+console.log "read default mimetypes from #{mimetypesinfn}"
+mimetypesin = fs.readFileSync mimetypesinfn,'utf8'
+try 
+  mimetypes = JSON.parse mimetypesin
+catch err
+  console.log "Error parsing JSON from #{mimetypesinfn}: #{err.message}"
+  process.exit -1
+
+# built-in mimetypes
+for mt,mtinfo of mimetypes
+  console.log "Check default mimetype #{mt}"
+  if not mtinfo.compat?
+    mtinfo.compat = {}
+  for dt,dtinfo of devices
+    #console.log "- against device #{dt}"
+    dtcompat = {}
+    if dtinfo.userAgentPattern?
+      dtcompat.userAgentPattern = dtinfo.userAgentPattern
+    if dtinfo.supportsMime? and dtinfo.supportsMime.indexOf(mt) >= 0 
+      dtcompat.builtin = true
+    else if not dtinfo.optionalSupportsMime? or dtinfo.optionalSupportsMime.indexOf(mt) < 0
+      dtcompat.builtin = false
+    # undefined = maybe / optional
+    dtcompat.apps = []
+    mtinfo.compat[dt] = dtcompat
+
+console.log "Write initial mimetypes to #{mimetypesfn}"
+fs.writeFileSync mimetypesfn,JSON.stringify mimetypes
+
+# process atom file...
+atomfn = process.argv[2]
 
 parser = new xml2js.Parser()
 
@@ -72,6 +114,52 @@ get_baseurl = (feed) ->
 # your google shortener API key?!
 API_KEY = 'AIzaSyAZ2wia3BqnEkJEBQ7WYiDw3_VMi0bCC8s'
 
+# app-defined mimetypes...
+make_mimetypes = (feed,mimetypes) ->
+  console.log "make_mimetypes..."
+
+  for appentry in feed.entry 
+      title = appentry.title[0]
+      requires = for cat in appentry.category ? [] when cat.$.scheme == 'requires-device' and cat.$.term?
+        cat.$.term
+      supports = for cat in appentry.category ? [] when cat.$.scheme == 'supports-mime-type' and cat.$.term?
+        { mime: cat.$.term, label: cat.$.label ?= cat.$.term }
+      exclusive = for cat in appentry.category ? [] when cat.$.scheme == 'supports-mime-type-exclusive' and cat.$.term?
+        cat.$.term
+      appurls = for link in appentry.link ? [] when link.$.rel == 'enclosure' and link.$.href?
+        link.$.href
+
+      for device in requires
+
+        for support in supports
+          mt = support.mime
+          if not mimetypes[mt]?
+            mimetypes[mt] = { }
+          mtinfo = mimetypes[mt]
+          if support.label? and (not mtinfo.label? or mtinfo.label==mt)
+            mtinfo.label = support.label
+          # icon
+          iconurls = for link in appentry.link ? [] when link.$.rel == 'alternate' and link.$.type? and link.$.href? and /^image/.test link.$.type
+            link.$.href
+          if iconurls.length > 0 and not mtinfo.icon?
+            mtinfo.icon = iconurls[0]
+
+          if not mtinfo.compat?
+            mtinfo.compat = {}
+          if not mtinfo.compat[device]?
+            mtinfo.compat[device] = {}
+          dtcompat = mtinfo.compat[device]
+          if not dtcompat.userAgentPattern? and devices[device]?.userAgentPattern?
+            dtcompat.userAgentPattern = devices[device].userAgentPattern
+          if exclusive.length > 0
+            dtcompat.appsComplete = true
+
+          if not dtcompat.apps?
+            dtcompat.apps = []
+          for appurl in appurls
+            dtcompat.apps.push { name: title, url: appurl }
+
+
 # shorturl for each 
 make_shorturls = (feed,shorturls) ->
   console.log 'make_shorturls...'
@@ -92,7 +180,7 @@ make_shorturls = (feed,shorturls) ->
 
 
   # work out URLs to be shortened
-  # get.html?u=URL&t=TITLE[&d=DEVICETYPE][&m=MIMETYPE]&a=HELPERURL...
+  # get.html?u=URL&t=TITLE[&m=MIMETYPE]
   # each entry...
   for entry in feed.entry when not is_hidden entry
     title = entry.title[0]
@@ -105,29 +193,6 @@ make_shorturls = (feed,shorturls) ->
 
       mimeparam = if mime? then '&m='+encodeURIComponent(mime) else ''
       add_shorturl shorturls,url+mimeparam
-      # no helper
-      add_shorturl shorturls,url+mimeparam+'&a='
-
-      for device in ['other', 'android', 'ios', 'windowsphone']
-        devurl = url+'&d='+encodeURIComponent(device)
-
-        add_shorturl shorturls,devurl+mimeparam
-        # no helper
-        add_shorturl shorturls,devurl+mimeparam+'&a='
-
-        # each helper app
-        for appentry in feed.entry 
-          requires = for cat in appentry.category ? [] when cat.$.scheme == 'requires-device' and cat.$.term == device
-            cat.$.label
-          if requires?.length > 0
-            supports = for cat in appentry.category ? [] when cat.$.scheme == 'supports-mime-type' and cat.$.term == mime
-              cat.$.label ? cat.$.term 
-            if supports?.length > 0
-              appurls = for link in appentry.link ? [] when link.$.rel == 'enclosure'
-                link.$.href
-              if appurls?.length > 0
-                add_shorturl shorturls,devurl+'&a='+encodeURIComponent(appurls[0])
-            
 
 add_fileurl = (url, fileurls) ->
     #console.log "check #{url}"
@@ -225,6 +290,9 @@ get_cache_path = (url) ->
   path = hs.join '/'
   return path
 
+doneShorturls = false
+doneCache = false
+
 # parse file(s) and call worker(s)
 parser.parseString data,(err,result) ->
   if err 
@@ -234,6 +302,10 @@ parser.parseString data,(err,result) ->
   feed = result.feed
   console.log 'Feed '+feed.title+' ('+feed.id+')'
 
+  make_mimetypes feed,mimetypes
+  console.log "write mimetypes to #{mimetypesfn}"
+  fs.writeFileSync mimetypesfn,JSON.stringify mimetypes
+
   make_shorturls feed,shorturls
 
   fix_shorturls = (shorturls,i) ->
@@ -241,6 +313,9 @@ parser.parseString data,(err,result) ->
       # done
       console.log 'write shorturls.json'
       fs.writeFileSync shorturlsfn,JSON.stringify shorturls
+      doneShorturls = true
+      if doneShorturls and doneCache
+        process.exit 0
     else
       su = shorturls[i]
       if su.shorturl == undefined
@@ -303,6 +378,9 @@ parser.parseString data,(err,result) ->
       # done!
       console.log 'write cache.json'
       fs.writeFileSync cachefn,JSON.stringify cache
+      doneCache = true
+      if doneShorturls and doneCache
+        process.exit 0
     else
       file = cache.files[ix]
       #console.log 'fix_cache '+ix+': '+file.url+', was '+file.path
