@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html manifest="send.php?f=<%= encodeURIComponent(@manifestfn) %>&m=text/cache-manifest">
+<html manifest="<%= @manifestfn %>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
